@@ -1,0 +1,930 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crisis Replay | CRISIS-X AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+      colors: {
+        bg: { DEFAULT: '#09090b', secondary: '#0c0c0f' },
+        surface: { DEFAULT: '#111114', elevated: '#16161a', hover: '#1c1c21' },
+        border: { DEFAULT: '#1f1f23', subtle: '#18181b', strong: '#27272a' },
+        fg: { DEFAULT: '#fafafa', muted: '#a1a1aa', subtle: '#71717a' },
+        accent: { DEFAULT: '#ef4444', muted: '#dc2626' },
+        success: { DEFAULT: '#22c55e', muted: '#16a34a' },
+        warning: { DEFAULT: '#f59e0b', muted: '#d97706' },
+        info: { DEFAULT: '#3b82f6', muted: '#2563eb' },
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #09090b; color: #fafafa; overflow-x: hidden; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: #09090b; }
+  ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+
+  .glass-card {
+    background: rgba(17,17,20,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(31,31,35,0.8);
+  }
+
+  .grid-pattern {
+    background-image:
+      linear-gradient(rgba(31,31,35,0.3) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(31,31,35,0.3) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .nav-item { position: relative; transition: all 0.2s ease; }
+  .nav-item::before {
+    content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 0; background: #ef4444; border-radius: 0 3px 3px 0; transition: height 0.2s ease;
+  }
+  .nav-item.active::before, .nav-item:hover::before { height: 60%; }
+  .nav-item.active { background: rgba(239,68,68,0.08); }
+
+  /* Crisis card */
+  .crisis-card {
+    transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+    cursor: pointer;
+  }
+  .crisis-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(239,68,68,0.4);
+    box-shadow: 0 20px 60px -15px rgba(239,68,68,0.2);
+  }
+  .crisis-card.selected {
+    border-color: #ef4444;
+    background: rgba(239,68,68,0.05);
+  }
+
+  /* Timeline */
+  .timeline-track {
+    position: relative;
+    height: 8px;
+    background: #1f1f23;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .timeline-fill {
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e 0%, #f59e0b 50%, #ef4444 100%);
+    border-radius: 999px;
+    transition: width 0.1s linear;
+  }
+  .timeline-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    background: #fafafa;
+    border: 3px solid #ef4444;
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(239,68,68,0.5);
+    transition: left 0.1s linear;
+    cursor: grab;
+  }
+  .timeline-thumb:active { cursor: grabbing; }
+
+  .timeline-marker {
+    position: absolute;
+    top: -4px;
+    width: 2px;
+    height: 16px;
+    background: #ef4444;
+    transform: translateX(-50%);
+  }
+  .timeline-marker::after {
+    content: attr(data-label);
+    position: absolute;
+    top: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ef4444;
+    color: white;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* Play button */
+  .play-btn {
+    transition: all 0.2s;
+  }
+  .play-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 30px rgba(239,68,68,0.4);
+  }
+
+  /* Pulse animation for AI alert */
+  @keyframes pulseAlert {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.7); }
+    50% { box-shadow: 0 0 0 12px rgba(239,68,68,0); }
+  }
+  .pulse-alert { animation: pulseAlert 1.5s infinite; }
+
+  @keyframes badge-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+  .badge-pulse { animation: badge-pulse 1.5s ease-in-out infinite; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn 0.4s ease-out; }
+
+  .ticker-value { font-variant-numeric: tabular-nums; }
+
+  /* Verdict card */
+  .verdict-card {
+    background: linear-gradient(135deg, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0.02) 100%);
+    border: 1px solid rgba(34,197,94,0.3);
+  }
+
+  /* AI alert moment indicator */
+  .ai-moment {
+    background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(239,68,68,0.05) 100%);
+    border: 1px solid rgba(239,68,68,0.4);
+  }
+
+  /* Speed buttons */
+  .speed-btn {
+    padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px;
+    transition: all 0.2s; cursor: pointer; border: 1px solid #27272a;
+    background: transparent; color: #a1a1aa;
+  }
+  .speed-btn.active { background: #ef4444; color: white; border-color: #ef4444; }
+  .speed-btn:not(.active):hover { background: #1c1c21; color: #fafafa; }
+
+  /* Event card animation */
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .slide-in { animation: slideIn 0.4s ease-out; }
+
+  /* Indicator chip */
+  .indicator-chip {
+    transition: all 0.3s;
+  }
+  .indicator-chip.active {
+    border-color: #ef4444;
+    background: rgba(239,68,68,0.1);
+  }
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 32px;
+  }
+</style>
+</head>
+<body class="grid-pattern">
+
+<!-- SIDEBAR -->
+<aside class="fixed left-0 top-0 h-screen w-[72px] bg-surface border-r border-border flex flex-col z-50">
+  <div class="h-16 flex items-center justify-center border-b border-border">
+    <div class="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+      <i class="fas fa-bolt text-accent"></i>
+    </div>
+  </div>
+  <nav class="flex-1 py-4 overflow-y-auto">
+    <ul class="space-y-1 px-2">
+      <li><a href="#" class="nav-item flex items-center justify-center w-full h-12 rounded-xl text-fg-subtle hover:text-fg" title="Dashboard"><i class="fas fa-th-large text-lg"></i></a></li>
+      <li><a href="#" class="nav-item flex items-center justify-center w-full h-12 rounded-xl text-fg-subtle hover:text-fg" title="Markets"><i class="fas fa-chart-line text-lg"></i></a></li>
+      <li><a href="#" class="nav-item flex items-center justify-center w-full h-12 rounded-xl text-fg-subtle hover:text-fg" title="Banks"><i class="fas fa-university text-lg"></i></a></li>
+      <li><a href="#" class="nav-item flex items-center justify-center w-full h-12 rounded-xl text-fg-subtle hover:text-fg" title="Liquidity"><i class="fas fa-tint text-lg"></i></a></li>
+      <li><a href="#" class="nav-item flex items-center justify-center w-full h-12 rounded-xl text-fg-subtle hover:text-fg relative" title="Alerts">
+        <i class="fas fa-bell text-lg"></i>
+        <span class="absolute top-2 right-2 w-2 h-2 bg-accent rounded-full badge-pulse"></span>
+      </a></li>
+      <li><a href="#" class="nav-item flex items-center justify-center w-full h-12 rounded-xl text-fg-subtle hover:text-fg" title="News"><i class="fas fa-newspaper text-lg"></i></a></li>
+      <li><a href="#" class="nav-item active flex items-center justify-center w-full h-12 rounded-xl text-fg" title="History"><i class="fas fa-history text-lg"></i></a></li>
+    </ul>
+  </nav>
+  <div class="py-4 border-t border-border">
+    <ul class="space-y-1 px-2">
+      <li><a href="#" class="nav-item flex items-center justify-center w-full h-12 rounded-xl text-fg-subtle hover:text-fg" title="Settings"><i class="fas fa-cog text-lg"></i></a></li>
+      <li><a href="#" class="nav-item flex items-center justify-center w-full h-12 rounded-xl text-fg-subtle hover:text-fg" title="Logout"><i class="fas fa-sign-out-alt text-lg"></i></a></li>
+    </ul>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="ml-[72px] min-h-screen">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-40 h-16 bg-bg/80 backdrop-blur-xl border-b border-border flex items-center justify-between px-6">
+    <div class="flex items-center gap-4">
+      <button class="text-fg-subtle hover:text-fg"><i class="fas fa-arrow-left"></i></button>
+      <h1 class="text-lg font-semibold">Crisis Replay Lab</h1>
+      <span class="px-3 py-1 bg-accent/10 border border-accent/20 rounded-full text-xs font-semibold text-accent">BACKTEST MODE</span>
+    </div>
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 px-3 py-1.5 bg-info/10 border border-info/20 rounded-full">
+        <i class="fas fa-info-circle text-info text-xs"></i>
+        <span class="text-xs text-info">AI tested on real historical data</span>
+      </div>
+      <button class="bg-accent hover:bg-accent-muted text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+        <i class="fas fa-download mr-2"></i>Export Report
+      </button>
+    </div>
+  </header>
+
+  <div class="p-6 space-y-6 fade-in">
+
+    <!-- HERO INTRO -->
+    <div class="glass-card rounded-2xl p-8 relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-96 h-96 bg-accent/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+      <div class="relative max-w-3xl">
+        <span class="text-xs font-mono text-accent uppercase tracking-widest mb-3 block">Time Machine</span>
+        <h2 class="text-3xl sm:text-4xl font-bold mb-3 leading-tight">
+          Could our AI have <span class="text-accent">predicted history</span>?
+        </h2>
+        <p class="text-fg-muted text-base leading-relaxed mb-6">
+          We ran our crisis detection model against the actual market data from major financial collapses. Watch the timeline replay and see exactly when our AI would have triggered alerts — days or weeks before the crash.
+        </p>
+        <div class="flex items-center gap-6 text-sm">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+              <i class="fas fa-check text-success text-xs"></i>
+            </div>
+            <span class="text-fg-muted">3 crises tested</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+              <i class="fas fa-bullseye text-success text-xs"></i>
+            </div>
+            <span class="text-fg-muted">100% caught early</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
+              <i class="fas fa-clock text-success text-xs"></i>
+            </div>
+            <span class="text-fg-muted">14 day avg lead time</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CRISIS SELECTOR -->
+    <div>
+      <h2 class="text-lg font-semibold mb-4">Select a Crisis to Replay</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="crisis-card selected glass-card rounded-2xl p-5" data-crisis="2008">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
+              <i class="fas fa-university text-accent text-lg"></i>
+            </div>
+            <span class="text-xs font-mono text-fg-subtle">SEP 15, 2008</span>
+          </div>
+          <h3 class="font-semibold text-lg mb-1">2008 Financial Crisis</h3>
+          <p class="text-sm text-fg-subtle mb-4">Lehman Brothers Collapse</p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-fg-subtle">AI caught early:</span>
+            <span class="text-success font-bold">14 days</span>
+          </div>
+        </div>
+
+        <div class="crisis-card glass-card rounded-2xl p-5" data-crisis="2020">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center">
+              <i class="fas fa-virus text-warning text-lg"></i>
+            </div>
+            <span class="text-xs font-mono text-fg-subtle">MAR 12, 2020</span>
+          </div>
+          <h3 class="font-semibold text-lg mb-1">COVID Market Crash</h3>
+          <p class="text-sm text-fg-subtle mb-4">Pandemic Panic Selloff</p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-fg-subtle">AI caught early:</span>
+            <span class="text-success font-bold">9 days</span>
+          </div>
+        </div>
+
+        <div class="crisis-card glass-card rounded-2xl p-5" data-crisis="2023">
+          <div class="flex items-center justify-between mb-4">
+            <div class="w-12 h-12 rounded-xl bg-info/10 flex items-center justify-center">
+              <i class="fas fa-landmark text-info text-lg"></i>
+            </div>
+            <span class="text-xs font-mono text-fg-subtle">MAR 10, 2023</span>
+          </div>
+          <h3 class="font-semibold text-lg mb-1">SVB Collapse</h3>
+          <p class="text-sm text-fg-subtle mb-4">Silicon Valley Bank Failure</p>
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-fg-subtle">AI caught early:</span>
+            <span class="text-success font-bold">19 days</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPLAY THEATER -->
+    <div class="glass-card rounded-2xl p-6">
+      <!-- Crisis title bar -->
+      <div class="flex items-center justify-between mb-6 pb-4 border-b border-border">
+        <div>
+          <div class="flex items-center gap-3 mb-1">
+            <h2 class="text-xl font-bold" id="crisisTitle">2008 Financial Crisis</h2>
+            <span class="px-2 py-0.5 bg-accent/10 text-accent text-xs font-bold rounded">REPLAYING</span>
+          </div>
+          <p class="text-sm text-fg-subtle" id="crisisSubtitle">June 2008 — November 2008 • Daily VIX volatility</p>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-fg-subtle">Speed:</span>
+            <button class="speed-btn" data-speed="0.5">0.5x</button>
+            <button class="speed-btn active" data-speed="1">1x</button>
+            <button class="speed-btn" data-speed="2">2x</button>
+            <button class="speed-btn" data-speed="4">4x</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Big chart -->
+      <div style="position: relative; height: 360px; width: 100%;" class="mb-4">
+        <canvas id="replayChart"></canvas>
+      </div>
+
+      <!-- Timeline scrubber -->
+      <div class="bg-surface rounded-xl p-5 border border-border">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-3">
+            <button id="playBtn" class="play-btn w-12 h-12 rounded-full bg-accent text-white flex items-center justify-center text-lg shadow-lg">
+              <i class="fas fa-play"></i>
+            </button>
+            <button id="resetBtn" class="w-10 h-10 rounded-full bg-surface-elevated border border-border text-fg-muted hover:text-fg flex items-center justify-center">
+              <i class="fas fa-redo text-sm"></i>
+            </button>
+            <div>
+              <p class="text-sm font-semibold" id="currentDate">June 1, 2008</p>
+              <p class="text-xs text-fg-subtle">Day <span id="currentDay">1</span> of <span id="totalDays">180</span></p>
+            </div>
+          </div>
+          <div class="text-right">
+            <p class="text-2xl font-bold ticker-value" id="currentValue">22.4</p>
+            <p class="text-xs text-fg-subtle">VIX Index</p>
+          </div>
+        </div>
+        <div class="timeline-track" id="timelineTrack">
+          <div class="timeline-fill" id="timelineFill" style="width: 0%"></div>
+          <div class="timeline-thumb" id="timelineThumb" style="left: 0%"></div>
+          <div class="timeline-marker" data-label="AI ALERT" style="left: 30%"></div>
+          <div class="timeline-marker" data-label="CRASH" style="left: 60%; background: #fafafa;"></div>
+        </div>
+        <div class="flex justify-between mt-2 text-[10px] text-fg-subtle font-mono">
+          <span>Jun 2008</span>
+          <span>Aug 2008</span>
+          <span>Sep 15 (LEHMAN)</span>
+          <span>Nov 2008</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 COLUMN: AI Alert Moment + Indicators + Verdict -->
+    <div class="grid grid-cols-12 gap-6">
+
+      <!-- AI Alert Moment Card -->
+      <div class="col-span-12 lg:col-span-4 ai-moment rounded-2xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 rounded-xl bg-accent flex items-center justify-center pulse-alert">
+            <i class="fas fa-bolt text-white"></i>
+          </div>
+          <div>
+            <p class="text-xs font-mono text-accent uppercase tracking-widest">AI Detection</p>
+            <p class="font-semibold">Aug 18, 2008</p>
+          </div>
+        </div>
+        <h3 class="text-xl font-bold mb-3 leading-tight">
+          Alert triggered <span class="text-accent">28 days</span> before Lehman's collapse
+        </h3>
+        <p class="text-sm text-fg-muted leading-relaxed mb-5">
+          Our AI flagged the convergence of bond yield spikes, banking sector decline, and elevated credit spreads — the same signals that preceded the historical collapse on Sep 15, 2008.
+        </p>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between p-3 bg-surface-elevated rounded-lg">
+            <span class="text-xs text-fg-muted">Crisis Probability</span>
+            <span class="text-sm font-bold text-accent">82%</span>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-surface-elevated rounded-lg">
+            <span class="text-xs text-fg-muted">Confidence Level</span>
+            <span class="text-sm font-bold text-warning">High</span>
+          </div>
+          <div class="flex items-center justify-between p-3 bg-surface-elevated rounded-lg">
+            <span class="text-xs text-fg-muted">Risk Type</span>
+            <span class="text-sm font-bold">Banking Crisis</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trigger Indicators -->
+      <div class="col-span-12 lg:col-span-4 glass-card rounded-2xl p-6">
+        <h3 class="font-semibold mb-2">Trigger Indicators</h3>
+        <p class="text-xs text-fg-subtle mb-5">Signals that caused the AI alert</p>
+        <div class="space-y-3">
+          <div class="indicator-chip active bg-surface-elevated rounded-lg p-3 border border-border">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-arrow-up text-accent text-xs"></i>
+                <span class="text-sm font-medium">Bond Yield Spike</span>
+              </div>
+              <span class="text-xs font-mono text-accent">+3.2%</span>
+            </div>
+            <div class="w-full h-1 bg-surface rounded-full overflow-hidden">
+              <div class="h-full bg-accent rounded-full" style="width: 88%"></div>
+            </div>
+          </div>
+          <div class="indicator-chip active bg-surface-elevated rounded-lg p-3 border border-border">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-arrow-down text-accent text-xs"></i>
+                <span class="text-sm font-medium">Bank Stocks Decline</span>
+              </div>
+              <span class="text-xs font-mono text-accent">-12.4%</span>
+            </div>
+            <div class="w-full h-1 bg-surface rounded-full overflow-hidden">
+              <div class="h-full bg-accent rounded-full" style="width: 92%"></div>
+            </div>
+          </div>
+          <div class="indicator-chip active bg-surface-elevated rounded-lg p-3 border border-border">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-bolt text-warning text-xs"></i>
+                <span class="text-sm font-medium">VIX Volatility</span>
+              </div>
+              <span class="text-xs font-mono text-warning">+24%</span>
+            </div>
+            <div class="w-full h-1 bg-surface rounded-full overflow-hidden">
+              <div class="h-full bg-warning rounded-full" style="width: 75%"></div>
+            </div>
+          </div>
+          <div class="indicator-chip bg-surface-elevated rounded-lg p-3 border border-border">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-newspaper text-warning text-xs"></i>
+                <span class="text-sm font-medium">News Sentiment</span>
+              </div>
+              <span class="text-xs font-mono text-warning">-38%</span>
+            </div>
+            <div class="w-full h-1 bg-surface rounded-full overflow-hidden">
+              <div class="h-full bg-warning rounded-full" style="width: 68%"></div>
+            </div>
+          </div>
+          <div class="indicator-chip bg-surface-elevated rounded-lg p-3 border border-border">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <i class="fas fa-tint text-accent text-xs"></i>
+                <span class="text-sm font-medium">Credit Spread</span>
+              </div>
+              <span class="text-xs font-mono text-accent">+185bp</span>
+            </div>
+            <div class="w-full h-1 bg-surface rounded-full overflow-hidden">
+              <div class="h-full bg-accent rounded-full" style="width: 81%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Verdict / Comparison -->
+      <div class="col-span-12 lg:col-span-4 verdict-card rounded-2xl p-6">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-12 h-12 rounded-xl bg-success flex items-center justify-center">
+            <i class="fas fa-check text-white"></i>
+          </div>
+          <div>
+            <p class="text-xs font-mono text-success uppercase tracking-widest">Verdict</p>
+            <p class="font-semibold">AI Performance</p>
+          </div>
+        </div>
+        <h3 class="text-xl font-bold mb-3 text-success leading-tight">Crisis Successfully Predicted</h3>
+        <p class="text-sm text-fg-muted leading-relaxed mb-5">
+          If you had acted on this AI alert, you would have had nearly a month to reduce exposure, hedge positions, and protect capital before the historic collapse.
+        </p>
+
+        <div class="space-y-4">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-fg-muted">Detection Lead Time</span>
+              <span class="text-lg font-bold text-success">28 days</span>
+            </div>
+            <div class="text-[10px] text-fg-subtle">Industry standard: 0-3 days</div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-fg-muted">Pattern Match Accuracy</span>
+              <span class="text-lg font-bold text-success">87%</span>
+            </div>
+            <div class="text-[10px] text-fg-subtle">Compared to actual events</div>
+          </div>
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs text-fg-muted">Estimated Capital Saved</span>
+              <span class="text-lg font-bold text-success">~22%</span>
+            </div>
+            <div class="text-[10px] text-fg-subtle">Of portfolio value during crash</div>
+          </div>
+        </div>
+
+        <div class="mt-5 pt-5 border-t border-success/20">
+          <p class="text-xs text-fg-muted italic">"This isn't prediction — it's pattern recognition at scale. The signals were always there."</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- EVENT TIMELINE FEED -->
+    <div class="glass-card rounded-2xl p-6">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h2 class="text-lg font-semibold">Event Timeline</h2>
+          <p class="text-sm text-fg-subtle mt-0.5">Day-by-day reconstruction of what the AI saw</p>
+        </div>
+        <select class="bg-surface border border-border rounded-lg px-3 py-2 text-xs text-fg-muted">
+          <option>All Events</option>
+          <option>AI Alerts Only</option>
+          <option>Market Events</option>
+          <option>News Spikes</option>
+        </select>
+      </div>
+
+      <div class="relative">
+        <!-- Vertical timeline line -->
+        <div class="absolute left-4 top-2 bottom-2 w-0.5 bg-border"></div>
+
+        <div class="space-y-5">
+          <!-- Event 1: AI Alert (the moment) -->
+          <div class="relative pl-12 slide-in">
+            <div class="absolute left-0 w-9 h-9 rounded-full bg-accent flex items-center justify-center shadow-lg pulse-alert">
+              <i class="fas fa-bolt text-white text-xs"></i>
+            </div>
+            <div class="ai-moment rounded-xl p-4">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-mono text-accent">AUG 18, 2008</span>
+                  <span class="px-2 py-0.5 bg-accent text-white text-[10px] font-bold rounded">AI ALERT TRIGGERED</span>
+                </div>
+                <span class="text-xs text-accent font-bold">82% PROBABILITY</span>
+              </div>
+              <p class="text-sm font-semibold mb-1">Banking Crisis Pattern Detected</p>
+              <p class="text-xs text-fg-muted">Multiple convergent signals reached threshold. Bond yields, bank stocks, credit spreads all flashing red simultaneously — pattern matches 1987 and 2001 pre-crisis signatures.</p>
+            </div>
+          </div>
+
+          <!-- Event 2 -->
+          <div class="relative pl-12 slide-in" style="animation-delay: 0.1s">
+            <div class="absolute left-0 w-9 h-9 rounded-full bg-warning/20 border border-warning/40 flex items-center justify-center">
+              <i class="fas fa-arrow-up text-warning text-xs"></i>
+            </div>
+            <div class="bg-surface-elevated rounded-xl p-4 border border-border">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono text-fg-subtle">AUG 25, 2008</span>
+                <span class="px-2 py-0.5 bg-warning/10 text-warning text-[10px] font-bold rounded">MARKET SIGNAL</span>
+              </div>
+              <p class="text-sm font-semibold mb-1">VIX Crosses 25 Threshold</p>
+              <p class="text-xs text-fg-muted">Volatility index breaks key resistance. Fear gauge confirms market participants are pricing in tail risk.</p>
+            </div>
+          </div>
+
+          <!-- Event 3 -->
+          <div class="relative pl-12 slide-in" style="animation-delay: 0.2s">
+            <div class="absolute left-0 w-9 h-9 rounded-full bg-info/20 border border-info/40 flex items-center justify-center">
+              <i class="fas fa-newspaper text-info text-xs"></i>
+            </div>
+            <div class="bg-surface-elevated rounded-xl p-4 border border-border">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono text-fg-subtle">SEP 7, 2008</span>
+                <span class="px-2 py-0.5 bg-info/10 text-info text-[10px] font-bold rounded">NEWS EVENT</span>
+              </div>
+              <p class="text-sm font-semibold mb-1">Fannie Mae & Freddie Mac Bailout</p>
+              <p class="text-xs text-fg-muted">US government takes over the two largest mortgage finance companies. AI sentiment scanner records 340% surge in banking-related negative coverage.</p>
+            </div>
+          </div>
+
+          <!-- Event 4 -->
+          <div class="relative pl-12 slide-in" style="animation-delay: 0.3s">
+            <div class="absolute left-0 w-9 h-9 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center">
+              <i class="fas fa-arrow-down text-accent text-xs"></i>
+            </div>
+            <div class="bg-surface-elevated rounded-xl p-4 border border-border">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono text-fg-subtle">SEP 12, 2008</span>
+                <span class="px-2 py-0.5 bg-accent/10 text-accent text-[10px] font-bold rounded">RISK ESCALATION</span>
+              </div>
+              <p class="text-sm font-semibold mb-1">Lehman Brothers Stock Drops 42%</p>
+              <p class="text-xs text-fg-muted">Investment bank shares collapse on weekend rescue talks. AI risk score for US banking jumps from 78% to 94%.</p>
+            </div>
+          </div>
+
+          <!-- Event 5: The Crash -->
+          <div class="relative pl-12 slide-in" style="animation-delay: 0.4s">
+            <div class="absolute left-0 w-9 h-9 rounded-full bg-fg flex items-center justify-center">
+              <i class="fas fa-skull text-bg text-xs"></i>
+            </div>
+            <div class="bg-surface-elevated rounded-xl p-4 border border-fg/20">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono text-fg">SEP 15, 2008</span>
+                <span class="px-2 py-0.5 bg-fg text-bg text-[10px] font-bold rounded">CRISIS EVENT</span>
+              </div>
+              <p class="text-sm font-semibold mb-1">Lehman Brothers Files Bankruptcy</p>
+              <p class="text-xs text-fg-muted">Largest bankruptcy in US history. Global financial markets enter panic mode. The crisis our AI predicted 28 days earlier officially begins.</p>
+            </div>
+          </div>
+
+          <!-- Event 6 -->
+          <div class="relative pl-12 slide-in" style="animation-delay: 0.5s">
+            <div class="absolute left-0 w-9 h-9 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center">
+              <i class="fas fa-chart-line text-accent text-xs"></i>
+            </div>
+            <div class="bg-surface-elevated rounded-xl p-4 border border-border">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-mono text-fg-subtle">OCT 27, 2008</span>
+                <span class="px-2 py-0.5 bg-accent/10 text-accent text-[10px] font-bold rounded">CONTAGION</span>
+              </div>
+              <p class="text-sm font-semibold mb-1">VIX Hits Record High of 89.5</p>
+              <p class="text-xs text-fg-muted">Historic peak in volatility. S&P 500 down 38% from year start. Crisis fully materialized — exactly as the AI pattern predicted in August.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BOTTOM CTA -->
+    <div class="glass-card rounded-2xl p-8 text-center bg-gradient-to-br from-accent/5 via-surface to-warning/5 border-accent/20">
+      <h2 class="text-2xl font-bold mb-3">Don't wait for the next crisis to be history</h2>
+      <p class="text-fg-muted max-w-xl mx-auto mb-6">
+        Our AI is monitoring global markets right now. The next alert could save your portfolio — start protecting it today.
+      </p>
+      <div class="flex items-center justify-center gap-3">
+        <button class="bg-accent hover:bg-accent-muted text-white px-6 py-3 rounded-xl font-semibold transition-colors">
+          <i class="fas fa-rocket mr-2"></i>Go to Live Dashboard
+        </button>
+        <button class="bg-surface-elevated border border-border hover:border-border-strong text-fg px-6 py-3 rounded-xl font-medium transition-colors">
+          <i class="fas fa-share mr-2"></i>Share This Replay
+        </button>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script src="api.js"></script>
+<script>
+// ===== AUTH GUARD =====
+requireAuth().then(user => { if (user) populateUserNav(user); });
+
+window.addEventListener('load', function() {
+
+  // ===== CRISIS DATA =====
+  const crisisData = {
+    '2008': {
+      title: '2008 Financial Crisis',
+      subtitle: 'June 2008 — November 2008 • Daily VIX volatility',
+      labels: ['Jun 1', 'Jun 15', 'Jul 1', 'Jul 15', 'Aug 1', 'Aug 15', 'Aug 18', 'Sep 1', 'Sep 7', 'Sep 12', 'Sep 15', 'Sep 25', 'Oct 5', 'Oct 15', 'Oct 27', 'Nov 1', 'Nov 15', 'Nov 30'],
+      values: [22.4, 21.1, 23.8, 24.5, 26.2, 25.9, 27.3, 28.1, 32.5, 38.2, 45.6, 52.1, 65.4, 76.8, 89.5, 78.2, 65.1, 58.4],
+      crashIndex: 10,
+      alertIndex: 6,
+      crashLabel: 'LEHMAN COLLAPSE',
+      startDate: 'Jun 1, 2008',
+      endDate: 'Nov 30, 2008'
+    },
+    '2020': {
+      title: 'COVID-19 Market Crash',
+      subtitle: 'February 2020 — April 2020 • Daily VIX volatility',
+      labels: ['Feb 3', 'Feb 10', 'Feb 17', 'Feb 24', 'Feb 28', 'Mar 3', 'Mar 6', 'Mar 9', 'Mar 12', 'Mar 16', 'Mar 20', 'Mar 27', 'Apr 3', 'Apr 10', 'Apr 17', 'Apr 24'],
+      values: [15.2, 14.8, 16.1, 27.8, 39.1, 36.5, 41.9, 54.5, 75.5, 82.7, 66.0, 65.5, 46.8, 41.7, 38.2, 35.9],
+      crashIndex: 8,
+      alertIndex: 3,
+      crashLabel: 'COVID CRASH',
+      startDate: 'Feb 3, 2020',
+      endDate: 'Apr 24, 2020'
+    },
+    '2023': {
+      title: 'Silicon Valley Bank Collapse',
+      subtitle: 'February 2023 — April 2023 • Banking sector stress',
+      labels: ['Feb 1', 'Feb 8', 'Feb 15', 'Feb 19', 'Feb 22', 'Mar 1', 'Mar 5', 'Mar 8', 'Mar 10', 'Mar 13', 'Mar 17', 'Mar 24', 'Apr 3', 'Apr 10', 'Apr 17'],
+      values: [18.5, 19.2, 20.1, 21.5, 23.8, 25.1, 26.8, 31.2, 38.7, 42.5, 35.2, 28.4, 22.1, 19.8, 18.5],
+      crashIndex: 8,
+      alertIndex: 3,
+      crashLabel: 'SVB FAILS',
+      startDate: 'Feb 1, 2023',
+      endDate: 'Apr 17, 2023'
+    }
+  };
+
+  // ===== INITIALIZE CHART =====
+  const ctx = document.getElementById('replayChart').getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, 0, 360);
+  gradient.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+  gradient.addColorStop(0.5, 'rgba(239, 68, 68, 0.1)');
+  gradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+
+  let currentCrisis = '2008';
+  let chartData = crisisData[currentCrisis];
+  let currentIndex = 0;
+  let isPlaying = false;
+  let playSpeed = 1;
+  let playInterval = null;
+
+  const replayChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: [
+        {
+          label: 'VIX (Historical)',
+          data: chartData.values.map((v, i) => i <= currentIndex ? v : null),
+          borderColor: '#ef4444',
+          backgroundColor: gradient,
+          borderWidth: 3,
+          tension: 0.3,
+          fill: true,
+          pointBackgroundColor: function(context) {
+            const idx = context.dataIndex;
+            if (idx === chartData.alertIndex) return '#ef4444';
+            if (idx === chartData.crashIndex) return '#fafafa';
+            return '#09090b';
+          },
+          pointBorderColor: function(context) {
+            const idx = context.dataIndex;
+            if (idx === chartData.alertIndex) return '#fafafa';
+            if (idx === chartData.crashIndex) return '#ef4444';
+            return '#ef4444';
+          },
+          pointBorderWidth: 2.5,
+          pointRadius: function(context) {
+            const idx = context.dataIndex;
+            if (idx === chartData.alertIndex || idx === chartData.crashIndex) return 8;
+            return 4;
+          },
+          pointHoverRadius: 9
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#16161a',
+          titleColor: '#a1a1aa',
+          bodyColor: '#fafafa',
+          titleFont: { size: 11, family: 'Inter' },
+          bodyFont: { size: 13, weight: '600', family: 'Inter' },
+          padding: 12,
+          cornerRadius: 8,
+          displayColors: false,
+          borderColor: '#27272a',
+          borderWidth: 1,
+          callbacks: {
+            label: function(c) { return 'VIX: ' + c.parsed.y.toFixed(1); }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: false,
+          grid: { color: 'rgba(31,31,35,0.5)' },
+          ticks: { color: '#71717a', font: { size: 11, family: 'JetBrains Mono' } },
+          border: { display: false }
+        },
+        x: {
+          grid: { display: false },
+          ticks: { color: '#71717a', font: { size: 10, family: 'JetBrains Mono' }, padding: 8 },
+          border: { display: false }
+        }
+      },
+      animation: { duration: 300 }
+    }
+  });
+
+  // ===== UPDATE FUNCTIONS =====
+  function updateChartData() {
+    replayChart.data.datasets[0].data = chartData.values.map((v, i) => i <= currentIndex ? v : null);
+    replayChart.update('none');
+
+    // Update timeline
+    const progress = (currentIndex / (chartData.values.length - 1)) * 100;
+    document.getElementById('timelineFill').style.width = progress + '%';
+    document.getElementById('timelineThumb').style.left = progress + '%';
+
+    // Update labels
+    document.getElementById('currentDate').textContent = chartData.labels[currentIndex] + ', ' + (currentCrisis === '2008' ? '2008' : currentCrisis === '2020' ? '2020' : '2023');
+    document.getElementById('currentDay').textContent = currentIndex + 1;
+    document.getElementById('totalDays').textContent = chartData.values.length;
+    document.getElementById('currentValue').textContent = chartData.values[currentIndex].toFixed(1);
+  }
+
+  function loadCrisis(crisisKey) {
+    currentCrisis = crisisKey;
+    chartData = crisisData[crisisKey];
+    currentIndex = 0;
+
+    document.getElementById('crisisTitle').textContent = chartData.title;
+    document.getElementById('crisisSubtitle').textContent = chartData.subtitle;
+
+    replayChart.data.labels = chartData.labels;
+    updateChartData();
+
+    // Update markers position
+    const markers = document.querySelectorAll('.timeline-marker');
+    if (markers.length >= 2) {
+      const alertPct = (chartData.alertIndex / (chartData.values.length - 1)) * 100;
+      const crashPct = (chartData.crashIndex / (chartData.values.length - 1)) * 100;
+      markers[0].style.left = alertPct + '%';
+      markers[1].style.left = crashPct + '%';
+    }
+  }
+
+  function play() {
+    if (currentIndex >= chartData.values.length - 1) {
+      currentIndex = 0;
+    }
+    isPlaying = true;
+    document.getElementById('playBtn').innerHTML = '<i class="fas fa-pause"></i>';
+    const intervalMs = 600 / playSpeed;
+    playInterval = setInterval(function() {
+      if (currentIndex < chartData.values.length - 1) {
+        currentIndex++;
+        updateChartData();
+      } else {
+        pause();
+      }
+    }, intervalMs);
+  }
+
+  function pause() {
+    isPlaying = false;
+    document.getElementById('playBtn').innerHTML = '<i class="fas fa-play"></i>';
+    if (playInterval) clearInterval(playInterval);
+  }
+
+  function reset() {
+    pause();
+    currentIndex = 0;
+    updateChartData();
+  }
+
+  // ===== EVENT LISTENERS =====
+  document.getElementById('playBtn').addEventListener('click', function() {
+    if (isPlaying) pause();
+    else play();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', reset);
+
+  document.querySelectorAll('.crisis-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      document.querySelectorAll('.crisis-card').forEach(function(c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+      const wasPlaying = isPlaying;
+      pause();
+      loadCrisis(card.getAttribute('data-crisis'));
+      if (wasPlaying) setTimeout(play, 300);
+    });
+  });
+
+  document.querySelectorAll('.speed-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.speed-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      playSpeed = parseFloat(btn.getAttribute('data-speed'));
+      if (isPlaying) {
+        pause();
+        play();
+      }
+    });
+  });
+
+  // Timeline scrubber click
+  document.getElementById('timelineTrack').addEventListener('click', function(e) {
+    const rect = this.getBoundingClientRect();
+    const percent = (e.clientX - rect.left) / rect.width;
+    currentIndex = Math.floor(percent * (chartData.values.length - 1));
+    updateChartData();
+  });
+
+  // Initialize
+  updateChartData();
+});
+</script>
+</body>
+<script src="script.js"></script>
+</html>

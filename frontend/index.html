@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRISIS-X AI — Real-Time Financial Crisis Early Warning</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        bg: '#06060b',
+                        surface: '#0d0d14',
+                        card: '#12121c',
+                        border: '#1e1e2e',
+                        fg: '#e8e8ef',
+                        muted: '#6b6b80',
+                        accent: '#ff3b3b',
+                        accentGlow: '#ff3b3b40',
+                        safe: '#00e87b',
+                        safeGlow: '#00e87b30',
+                        warn: '#ffb800',
+                        warnGlow: '#ffb80030',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg: #06060b;
+            --surface: #0d0d14;
+            --card: #12121c;
+            --border: #1e1e2e;
+            --fg: #e8e8ef;
+            --muted: #6b6b80;
+            --accent: #ff3b3b;
+            --safe: #00e87b;
+            --warn: #ffb800;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            overflow-x: hidden;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        /* Canvas background */
+        #bgCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Ticker tape */
+        .ticker-wrap {
+            overflow: hidden;
+            white-space: nowrap;
+            background: rgba(13,13,20,0.9);
+            border-bottom: 1px solid var(--border);
+        }
+        .ticker-wrap:hover .ticker-content {
+    animation-play-state: paused;
+}
+        @keyframes tickerScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* Risk meter arc */
+        .risk-arc {
+            position: relative;
+            width: 280px;
+            height: 140px;
+            overflow: hidden;
+        }
+        .risk-arc svg { position: absolute; top: 0; left: 0; }
+
+        /* Glow pulse */
+        @keyframes glowPulse {
+            0%, 100% { opacity: 0.4; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .glow-pulse { animation: glowPulse 3s ease-in-out infinite; }
+
+        /* Fade in up */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Floating orbs */
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Grid line bg */
+        .grid-bg {
+            background-image:
+                linear-gradient(rgba(30,30,46,0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30,30,46,0.3) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        /* Risk needle animation */
+        @keyframes needleSweep {
+            0% { transform: rotate(-90deg); }
+            100% { transform: rotate(var(--needle-angle)); }
+        }
+        .risk-needle {
+            transform-origin: 140px 140px;
+            animation: needleSweep 2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            animation-delay: 0.5s;
+            transform: rotate(-90deg);
+        }
+
+        /* Card hover */
+        .feature-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 20px 60px -15px rgba(255,59,59,0.15);
+            border-color: rgba(255,59,59,0.3);
+        }
+
+        /* CTA button */
+        .cta-btn {
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .cta-btn::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.5s ease;
+        }
+        .cta-btn:hover::before { left: 100%; }
+        .cta-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 0 40px rgba(255,59,59,0.4);
+        }
+        .cta-btn:active { transform: scale(0.98); }
+
+        /* Stat counter */
+        .stat-value {
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Alert card flash */
+        @keyframes alertFlash {
+            0%, 100% { border-color: rgba(255,59,59,0.2); }
+            50% { border-color: rgba(255,59,59,0.6); }
+        }
+        .alert-flash { animation: alertFlash 2s ease-in-out infinite; }
+
+        /* Mini chart bars */
+        .mini-bar {
+            transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Nav blur */
+        .nav-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        /* How it works connector */
+        .step-connector {
+            position: relative;
+        }
+        .step-connector::after {
+            content: '';
+            position: absolute;
+            top: 28px;
+            right: -50%;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+            opacity: 0.3;
+        }
+        .step-connector:last-child::after { display: none; }
+
+        /* Typing cursor */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+        .cursor-blink { animation: blink 1s step-end infinite; }
+
+        /* Smooth section transitions */
+        section { position: relative; z-index: 1; }
+
+        /* Toast notification */
+        .toast {
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .toast.show { transform: translateX(0); }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Background Canvas for particles -->
+<canvas id="bgCanvas"></canvas>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast fixed top-6 right-6 z-[200] bg-card border border-border rounded-xl px-5 py-4 flex items-center gap-3 shadow-2xl max-w-sm">
+    <div class="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-bell text-accent text-sm"></i>
+    </div>
+    <div>
+        <p class="text-sm font-semibold text-fg">Alert Triggered</p>
+        <p class="text-xs text-muted" id="toastMsg">USA Banking Risk rose to 72%</p>
+    </div>
+    <button onclick="hideToast()" class="ml-2 text-muted hover:text-fg transition-colors" aria-label="Close notification">
+        <i class="fas fa-times text-xs"></i>
+    </button>
+</div>
+
+<!-- ===== NAVIGATION ===== -->
+<nav class="fixed top-0 left-0 w-full z-50 nav-blur bg-bg/70 border-b border-border/50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <a href="#" class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center">
+                <i class="fas fa-bolt text-accent text-sm"></i>
+            </div>
+            <span class="font-bold text-lg tracking-tight">CRISIS-X<span class="text-accent"> AI</span></span>
+        </a>
+        <div class="hidden md:flex items-center gap-8 text-sm text-muted">
+            <a href="#features" class="hover:text-fg transition-colors">Features</a>
+            <a href="#how-it-works" class="hover:text-fg transition-colors">How It Works</a>
+            <a href="#alerts" class="hover:text-fg transition-colors">Alerts</a>
+            <a href="#stats" class="hover:text-fg transition-colors">Impact</a>
+        </div>
+        <div class="flex items-center gap-3">
+            <a href="login.html"><button class="hidden sm:block text-sm text-muted hover:text-fg transition-colors px-4 py-2">Sign In</button></a>
+            <button onclick="goToDashboard()" class="cta-btn bg-accent text-white font-semibold px-8 py-4 rounded-xl text-base">
+    <i class="fas fa-rocket mr-2"></i>Launch Dashboard</button>
+        </div>
+    </div>
+</nav>
+
+<!-- ===== TICKER TAPE ===== -->
+<div class="ticker-wrap fixed top-16 left-0 w-full z-40 py-2">
+    <div class="ticker-content text-xs font-mono">
+        <!-- Ticker items duplicated for seamless loop -->
+    </div>
+</div>
+
+<!-- ===== HERO SECTION ===== -->
+<section class="relative min-h-screen flex items-center pt-32 pb-20 overflow-hidden">
+    <!-- Floating orbs -->
+    <div class="orb w-[500px] h-[500px] bg-accent/10 -top-40 -right-40 glow-pulse"></div>
+    <div class="orb w-[400px] h-[400px] bg-warn/8 bottom-20 -left-40 glow-pulse" style="animation-delay:1.5s"></div>
+
+    <div class="max-w-7xl mx-auto px-6 w-full relative z-10">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+            <!-- Left: Text -->
+            <div class="fade-in-up">
+                <div class="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 rounded-full px-4 py-1.5 mb-8">
+                    <span class="w-2 h-2 rounded-full bg-accent animate-pulse"></span>
+                    <span class="text-xs font-medium text-accent tracking-wide uppercase">Live Monitoring Active</span>
+                </div>
+
+                <h1 class="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight mb-6">
+                    Predict Crisis<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent via-warn to-accent">Before It Happens</span>
+                </h1>
+
+                <p class="text-lg text-muted max-w-lg mb-10 leading-relaxed">
+                    AI-powered early warning system that converts noisy financial data into actionable intelligence. Detect banking instability, market crashes, and liquidity stress — days before collapse.
+                </p>
+
+                <div class="flex flex-wrap items-center gap-4 mb-12">
+                    <button onclick="showToastMsg('Dashboard loading — 20 countries monitored')" class="cta-btn bg-accent text-white font-semibold px-8 py-4 rounded-xl text-base">
+                        <i class="fas fa-rocket mr-2"></i>Launch Dashboard
+                    </button>
+                    <button onclick="document.getElementById('how-it-works').scrollIntoView({behavior:'smooth'})" class="border border-border text-fg font-medium px-8 py-4 rounded-xl text-base hover:border-muted transition-colors">
+                        <i class="fas fa-play mr-2 text-muted"></i>See How It Works
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-8 text-sm">
+                    <div>
+                        <span class="text-2xl font-bold text-fg stat-value" data-target="20">0</span>
+                        <span class="text-muted ml-1">Countries</span>
+                    </div>
+                    <div class="w-px h-8 bg-border"></div>
+                    <div>
+                        <span class="text-2xl font-bold text-fg stat-value" data-target="150">0</span><span class="text-accent font-bold">+</span>
+                        <span class="text-muted ml-1">Data Feeds</span>
+                    </div>
+                    <div class="w-px h-8 bg-border"></div>
+                    <div>
+                        <span class="text-2xl font-bold text-fg stat-value" data-target="14">0</span>
+                        <span class="text-muted ml-1">Days Early</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Risk Meter + Mini Dashboard -->
+            <div class="fade-in-up flex justify-center lg:justify-end" style="transition-delay:0.2s">
+                <div class="relative">
+                    <!-- Risk Meter Arc -->
+                    <div class="risk-arc mb-6 mx-auto">
+                        <svg width="280" height="160" viewBox="0 0 280 160">
+                            <!-- Background arc -->
+                            <path d="M 20 140 A 120 120 0 0 1 260 140" fill="none" stroke="#1e1e2e" stroke-width="16" stroke-linecap="round"/>
+                            <!-- Green zone -->
+                            <path d="M 20 140 A 120 120 0 0 1 80 32" fill="none" stroke="#00e87b" stroke-width="16" stroke-linecap="round" opacity="0.3"/>
+                            <!-- Yellow zone -->
+                            <path d="M 80 32 A 120 120 0 0 1 175 20" fill="none" stroke="#ffb800" stroke-width="16" stroke-linecap="round" opacity="0.3"/>
+                            <!-- Red zone -->
+                            <path d="M 175 20 A 120 120 0 0 1 260 140" fill="none" stroke="#ff3b3b" stroke-width="16" stroke-linecap="round" opacity="0.3"/>
+                            <!-- Active arc (61%) -->
+                            <path d="M 20 140 A 120 120 0 0 1 175 20" fill="none" stroke="url(#arcGrad)" stroke-width="16" stroke-linecap="round" class="risk-arc-path" style="transition: stroke-dashoffset 2s ease"/>
+                            <!-- Needle -->
+                            <line x1="140" y1="140" x2="140" y2="35" stroke="#ff3b3b" stroke-width="3" stroke-linecap="round" class="risk-needle" style="--needle-angle: 20deg"/>
+                            <circle cx="140" cy="140" r="8" fill="#06060b" stroke="#ff3b3b" stroke-width="3"/>
+                            <defs>
+                                <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#00e87b"/>
+                                    <stop offset="50%" stop-color="#ffb800"/>
+                                    <stop offset="100%" stop-color="#ff3b3b"/>
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+
+                    <!-- Score Display -->
+                    <div class="text-center mb-8">
+                        <span class="text-5xl font-bold font-mono text-warn" id="heroScore">0</span>
+                        <span class="text-xl text-muted font-mono">%</span>
+                        <p class="text-sm text-muted mt-1">Global Risk Score</p>
+                    </div>
+
+                    <!-- Mini Dashboard Cards -->
+                    <div class="grid grid-cols-2 gap-3 w-[300px]">
+                        <div class="bg-card/80 border border-border rounded-xl p-3.5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-university text-accent text-xs"></i>
+                                <span class="text-[11px] text-muted uppercase tracking-wider">Banking</span>
+                            </div>
+                            <span class="text-lg font-bold text-accent">High</span>
+                            <div class="mt-2 flex gap-0.5" id="bankBars"></div>
+                        </div>
+                        <div class="bg-card/80 border border-border rounded-xl p-3.5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-chart-line text-warn text-xs"></i>
+                                <span class="text-[11px] text-muted uppercase tracking-wider">Market</span>
+                            </div>
+                            <span class="text-lg font-bold text-warn">Medium</span>
+                            <div class="mt-2 flex gap-0.5" id="marketBars"></div>
+                        </div>
+                        <div class="bg-card/80 border border-border rounded-xl p-3.5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-tint text-accent text-xs"></i>
+                                <span class="text-[11px] text-muted uppercase tracking-wider">Liquidity</span>
+                            </div>
+                            <span class="text-lg font-bold text-accent">Severe</span>
+                            <div class="mt-2 flex gap-0.5" id="liquidBars"></div>
+                        </div>
+                        <div class="bg-card/80 border border-border rounded-xl p-3.5">
+                            <div class="flex items-center gap-2 mb-2">
+                                <i class="fas fa-globe text-safe text-xs"></i>
+                                <span class="text-[11px] text-muted uppercase tracking-wider">Countries</span>
+                            </div>
+                            <span class="text-lg font-bold text-safe">20</span>
+                            <p class="text-[10px] text-muted mt-1">Monitored Live</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FEATURES SECTION ===== -->
+<section id="features" class="relative py-24 grid-bg">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 fade-in-up">
+            <span class="text-xs font-mono text-accent uppercase tracking-widest mb-4 block">Core Capabilities</span>
+            <h2 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">Intelligence That Matters</h2>
+            <p class="text-muted max-w-2xl mx-auto">Four pillars of financial threat detection, powered by machine learning models trained on decades of crisis data.</p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- Feature 1 -->
+            <div class="feature-card bg-card/60 border border-border rounded-2xl p-6 fade-in-up">
+                <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-5">
+                    <i class="fas fa-chart-area text-accent text-lg"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Market Analysis</h3>
+                <p class="text-sm text-muted leading-relaxed mb-4">Real-time tracking of S&P 500, Nifty 50, VIX, Gold, Oil, and USD Index with volatility pattern recognition.</p>
+                <div class="flex gap-1 items-end h-10" id="featChart1"></div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="feature-card bg-card/60 border border-border rounded-2xl p-6 fade-in-up" style="transition-delay:0.1s">
+                <div class="w-12 h-12 rounded-xl bg-warn/10 flex items-center justify-center mb-5">
+                    <i class="fas fa-university text-warn text-lg"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Bank Risk Prediction</h3>
+                <p class="text-sm text-muted leading-relaxed mb-4">Capital adequacy monitoring, share price collapse signals, and top risky bank identification across 20 countries.</p>
+                <div class="space-y-1.5">
+                    <div class="flex items-center gap-2"><span class="text-[10px] text-muted w-16">JPM</span><div class="flex-1 h-2 bg-border rounded-full overflow-hidden"><div class="h-full bg-warn rounded-full" style="width:68%"></div></div><span class="text-[10px] text-warn">68%</span></div>
+                    <div class="flex items-center gap-2"><span class="text-[10px] text-muted w-16">HDFC</span><div class="flex-1 h-2 bg-border rounded-full overflow-hidden"><div class="h-full bg-safe rounded-full" style="width:32%"></div></div><span class="text-[10px] text-safe">32%</span></div>
+                    <div class="flex items-center gap-2"><span class="text-[10px] text-muted w-16">DBS</span><div class="flex-1 h-2 bg-border rounded-full overflow-hidden"><div class="h-full bg-accent rounded-full" style="width:81%"></div></div><span class="text-[10px] text-accent">81%</span></div>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="feature-card bg-card/60 border border-border rounded-2xl p-6 fade-in-up" style="transition-delay:0.2s">
+                <div class="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-5">
+                    <i class="fas fa-tint text-accent text-lg"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">Liquidity Stress</h3>
+                <p class="text-sm text-muted leading-relaxed mb-4">Money market stress detection, yield curve inversion tracking, and funding shortage early indicators.</p>
+                <div class="flex items-center justify-between text-xs">
+                    <div class="text-center"><div class="text-lg font-bold text-accent">4.2%</div><div class="text-muted">Yield</div></div>
+                    <div class="text-accent text-lg"><i class="fas fa-arrow-up"></i></div>
+                    <div class="text-center"><div class="text-lg font-bold text-warn">2.1</div><div class="text-muted">Spread</div></div>
+                </div>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="feature-card bg-card/60 border border-border rounded-2xl p-6 fade-in-up" style="transition-delay:0.3s">
+                <div class="w-12 h-12 rounded-xl bg-safe/10 flex items-center justify-center mb-5">
+                    <i class="fas fa-brain text-safe text-lg"></i>
+                </div>
+                <h3 class="text-lg font-semibold mb-2">News Sentiment AI</h3>
+                <p class="text-sm text-muted leading-relaxed mb-4">Scans 5000+ headlines daily. Classifies sentiment impact on financial stability in real-time.</p>
+                <div class="bg-surface/80 rounded-lg p-3 border border-border/50">
+                    <p class="text-[11px] text-muted italic">"US banks face deposit concerns"</p>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="w-2 h-2 rounded-full bg-accent"></span>
+                        <span class="text-[11px] text-accent font-medium">Negative sentiment +12%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== HOW IT WORKS ===== -->
+<section id="how-it-works" class="relative py-24">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 fade-in-up">
+            <span class="text-xs font-mono text-accent uppercase tracking-widest mb-4 block">Pipeline</span>
+            <h2 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">How It Works</h2>
+            <p class="text-muted max-w-xl mx-auto">From raw financial data to actionable crisis warnings in four steps.</p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div class="step-connector text-center fade-in-up">
+                <div class="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-5">
+                    <i class="fas fa-database text-accent"></i>
+                </div>
+                <div class="text-[10px] font-mono text-accent mb-2">STEP 01</div>
+                <h3 class="font-semibold mb-2">Data Ingestion</h3>
+                <p class="text-sm text-muted">150+ financial feeds — stocks, bonds, forex, inflation, news — collected in real-time.</p>
+            </div>
+            <div class="step-connector text-center fade-in-up" style="transition-delay:0.1s">
+                <div class="w-14 h-14 rounded-2xl bg-warn/10 border border-warn/20 flex items-center justify-center mx-auto mb-5">
+                    <i class="fas fa-cogs text-warn"></i>
+                </div>
+                <div class="text-[10px] font-mono text-warn mb-2">STEP 02</div>
+                <h3 class="font-semibold mb-2">AI Analysis</h3>
+                <p class="text-sm text-muted">XGBoost + Isolation Forest models detect anomalies and score risk across all vectors.</p>
+            </div>
+            <div class="step-connector text-center fade-in-up" style="transition-delay:0.2s">
+                <div class="w-14 h-14 rounded-2xl bg-accent/10 border border-accent/20 flex items-center justify-center mx-auto mb-5">
+                    <i class="fas fa-exclamation-triangle text-accent"></i>
+                </div>
+                <div class="text-[10px] font-mono text-accent mb-2">STEP 03</div>
+                <h3 class="font-semibold mb-2">Alert Generation</h3>
+                <p class="text-sm text-muted">Crisis probability score computed. Alerts triggered when thresholds are breached.</p>
+            </div>
+            <div class="step-connector text-center fade-in-up" style="transition-delay:0.3s">
+                <div class="w-14 h-14 rounded-2xl bg-safe/10 border border-safe/20 flex items-center justify-center mx-auto mb-5">
+                    <i class="fas fa-shield-alt text-safe"></i>
+                </div>
+                <div class="text-[10px] font-mono text-safe mb-2">STEP 04</div>
+                <h3 class="font-semibold mb-2">Action Delivery</h3>
+                <p class="text-sm text-muted">Email, WhatsApp, dashboard popup — with AI explanation and recommended actions.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== LIVE ALERT DEMO ===== -->
+<section id="alerts" class="relative py-24 grid-bg">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="text-center mb-16 fade-in-up">
+            <span class="text-xs font-mono text-accent uppercase tracking-widest mb-4 block">Live Preview</span>
+            <h2 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">Alert Engine in Action</h2>
+            <p class="text-muted max-w-xl mx-auto">This is what a real crisis alert looks like — generated, explained, and delivered.</p>
+        </div>
+
+        <div class="grid lg:grid-cols-2 gap-8 items-start">
+            <!-- Alert Card -->
+            <div class="fade-in-up">
+                <div class="alert-flash bg-card/80 border border-accent/20 rounded-2xl p-8 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-accent/5 rounded-full -translate-y-1/2 translate-x-1/2"></div>
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center">
+                            <i class="fas fa-exclamation-circle text-accent text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold">ALERT #203</p>
+                            <p class="text-xs text-muted font-mono">Generated 2 min ago</p>
+                        </div>
+                        <span class="ml-auto bg-accent/15 text-accent text-[11px] font-bold px-3 py-1 rounded-full">CRITICAL</span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-surface/60 rounded-xl p-3">
+                            <p class="text-[10px] text-muted uppercase tracking-wider">Country</p>
+                            <p class="font-semibold mt-1"><i class="fas fa-flag-usa mr-1 text-muted"></i> USA</p>
+                        </div>
+                        <div class="bg-surface/60 rounded-xl p-3">
+                            <p class="text-[10px] text-muted uppercase tracking-wider">Risk Type</p>
+                            <p class="font-semibold mt-1 text-accent">Banking Crisis</p>
+                        </div>
+                        <div class="bg-surface/60 rounded-xl p-3">
+                            <p class="text-[10px] text-muted uppercase tracking-wider">Probability</p>
+                            <p class="font-semibold mt-1 text-accent text-2xl font-mono">72%</p>
+                        </div>
+                        <div class="bg-surface/60 rounded-xl p-3">
+                            <p class="text-[10px] text-muted uppercase tracking-wider">Confidence</p>
+                            <p class="font-semibold mt-1 text-warn">High</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs text-muted uppercase tracking-wider mb-3">Trigger Reasons</p>
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3 text-sm">
+                                <i class="fas fa-arrow-up text-accent text-xs w-4"></i>
+                                <span>Bond yield spike +3.2%</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <i class="fas fa-arrow-down text-accent text-xs w-4"></i>
+                                <span>Bank stocks down 8%</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <i class="fas fa-bolt text-accent text-xs w-4"></i>
+                                <span>VIX surged 18%</span>
+                            </div>
+                            <div class="flex items-center gap-3 text-sm">
+                                <i class="fas fa-newspaper text-warn text-xs w-4"></i>
+                                <span>Negative news surge +24%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Explanation -->
+            <div class="fade-in-up" style="transition-delay:0.15s">
+                <div class="bg-card/80 border border-border rounded-2xl p-8">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-xl bg-safe/10 flex items-center justify-center">
+                            <i class="fas fa-robot text-safe text-lg"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold">AI Analysis</p>
+                            <p class="text-xs text-muted font-mono">XGBoost + Isolation Forest</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-surface/60 rounded-xl p-4 mb-5 border border-border/50">
+                        <p class="text-sm leading-relaxed" id="aiTyping"></p>
+                        <span class="cursor-blink text-safe">|</span>
+                    </div>
+
+                    <div class="mb-5">
+                        <p class="text-xs text-muted uppercase tracking-wider mb-3">Historical Pattern Match</p>
+                        <div class="flex gap-3">
+                            <div class="flex-1 bg-accent/10 border border-accent/20 rounded-xl p-3 text-center">
+                                <p class="text-lg font-bold text-accent font-mono">2008</p>
+                                <p class="text-[10px] text-muted">Financial Crisis</p>
+                                <p class="text-xs text-accent mt-1">87% match</p>
+                            </div>
+                            <div class="flex-1 bg-warn/10 border border-warn/20 rounded-xl p-3 text-center">
+                                <p class="text-lg font-bold text-warn font-mono">2020</p>
+                                <p class="text-[10px] text-muted">COVID Crash</p>
+                                <p class="text-xs text-warn mt-1">62% match</p>
+                            </div>
+                            <div class="flex-1 bg-safe/10 border border-safe/20 rounded-xl p-3 text-center">
+                                <p class="text-lg font-bold text-safe font-mono">2023</p>
+                                <p class="text-[10px] text-muted">SVB Collapse</p>
+                                <p class="text-xs text-safe mt-1">74% match</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <p class="text-xs text-muted uppercase tracking-wider mb-3">Recommended Actions</p>
+                        <div class="space-y-2">
+                            <div class="flex items-start gap-2 text-sm">
+                                <i class="fas fa-check-circle text-safe mt-0.5 text-xs"></i>
+                                <span>Reduce exposure to US banking sector</span>
+                            </div>
+                            <div class="flex items-start gap-2 text-sm">
+                                <i class="fas fa-check-circle text-safe mt-0.5 text-xs"></i>
+                                <span>Increase cash reserves by 15-20%</span>
+                            </div>
+                            <div class="flex items-start gap-2 text-sm">
+                                <i class="fas fa-check-circle text-safe mt-0.5 text-xs"></i>
+                                <span>Monitor Federal Reserve announcements</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== STATS / IMPACT ===== -->
+<section id="stats" class="relative py-24">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="fade-in-up bg-gradient-to-br from-card to-surface border border-border rounded-3xl p-12 sm:p-16 relative overflow-hidden">
+            <div class="orb w-[300px] h-[300px] bg-accent/8 -top-20 -right-20"></div>
+            <div class="orb w-[200px] h-[200px] bg-safe/5 bottom-0 left-20"></div>
+
+            <div class="text-center mb-12 relative z-10">
+                <span class="text-xs font-mono text-accent uppercase tracking-widest mb-4 block">Proven Impact</span>
+                <h2 class="text-4xl sm:text-5xl font-bold tracking-tight">Backtested. Verified. Ready.</h2>
+            </div>
+
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
+                <div class="text-center">
+                    <p class="text-4xl font-bold font-mono text-accent stat-value" data-target="14">0</p>
+                    <p class="text-sm text-muted mt-2">Days Early Warning</p>
+                    <p class="text-xs text-muted/60 mt-1">2008 Crisis Backtest</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-4xl font-bold font-mono text-safe stat-value" data-target="89">0</p>
+                    <p class="text-sm text-muted mt-2">% Accuracy</p>
+                    <p class="text-xs text-muted/60 mt-1">Crisis Detection Rate</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-4xl font-bold font-mono text-warn stat-value" data-target="150">0</p><span class="text-warn font-bold text-xl">+</span>
+                    <p class="text-sm text-muted mt-2">Data Sources</p>
+                    <p class="text-xs text-muted/60 mt-1">Real-Time Feeds</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-4xl font-bold font-mono text-fg stat-value" data-target="5000">0</p><span class="text-fg font-bold text-xl">+</span>
+                    <p class="text-sm text-muted mt-2">News Scanned Daily</p>
+                    <p class="text-xs text-muted/60 mt-1">AI Sentiment Analysis</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CRISIS REPLAY TEASER ===== -->
+<section class="relative py-24 grid-bg">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <div class="fade-in-up">
+                <span class="text-xs font-mono text-accent uppercase tracking-widest mb-4 block">Historical Replay</span>
+                <h2 class="text-4xl sm:text-5xl font-bold tracking-tight mb-6">See the Signals<br>Before 2008</h2>
+                <p class="text-muted text-lg leading-relaxed mb-8">Our AI detected the 2008 financial crisis signals 14 days before Lehman Brothers collapsed. VIX rose, bank stocks crashed, credit spreads widened — our system would have flagged it all.</p>
+                <button onclick="showToastMsg('Crisis Replay — coming in Dashboard')" class="cta-btn bg-card border border-border text-fg font-semibold px-6 py-3 rounded-xl hover:border-accent/40 transition-colors">
+                    <i class="fas fa-history mr-2 text-accent"></i>Explore Crisis Replay
+                </button>
+            </div>
+            <div class="fade-in-up" style="transition-delay:0.15s">
+                <!-- Mini timeline chart -->
+                <div class="bg-card/80 border border-border rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <span class="text-sm font-semibold">VIX Volatility Index — 2008</span>
+                        <span class="text-xs text-accent font-mono bg-accent/10 px-2 py-1 rounded">CRASH</span>
+                    </div>
+                    <canvas id="miniTimeline" width="500" height="200"></canvas>
+                    <div class="flex items-center justify-between mt-3 text-[10px] text-muted font-mono">
+                        <span>Jan 2008</span>
+                        <span>Jun 2008</span>
+                        <span>Sep 2008</span>
+                        <span>Dec 2008</span>
+                    </div>
+                    <div class="mt-4 flex items-center gap-2 bg-accent/10 rounded-lg px-3 py-2">
+                        <i class="fas fa-bolt text-accent text-xs"></i>
+                        <span class="text-xs text-accent">AI would have triggered alert on Aug 18, 2008 — 28 days before collapse</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CTA SECTION ===== -->
+<section class="relative py-24">
+    <div class="max-w-4xl mx-auto px-6 text-center fade-in-up">
+        <div class="bg-gradient-to-br from-accent/10 via-card to-warn/5 border border-accent/15 rounded-3xl p-12 sm:p-16 relative overflow-hidden">
+            <div class="orb w-[400px] h-[400px] bg-accent/8 -top-40 left-1/2 -translate-x-1/2"></div>
+            <div class="relative z-10">
+                <h2 class="text-4xl sm:text-5xl font-bold tracking-tight mb-4">Don't Wait for the Next Crisis</h2>
+                <p class="text-muted text-lg max-w-xl mx-auto mb-10">Start monitoring global financial risk today. Get alerts before the market moves.</p>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button onclick="goToDashboard()" class="cta-btn bg-accent text-white font-semibold px-8 py-4 rounded-xl text-base">
+    <i class="fas fa-rocket mr-2"></i>Launch Dashboard
+</button>
+                    <button onclick="showToastMsg('Demo access ready')" class="border border-border text-fg font-medium px-8 py-4 rounded-xl hover:border-muted transition-colors">
+                        Try Demo
+                    </button>
+                </div>
+                <p class="text-xs text-muted mt-6">No credit card required. Free during hackathon.</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<footer class="border-t border-border py-12">
+    <div class="max-w-7xl mx-auto px-6">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+            <div>
+                <div class="flex items-center gap-2.5 mb-4">
+                    <div class="w-8 h-8 rounded-lg bg-accent/15 flex items-center justify-center">
+                        <i class="fas fa-bolt text-accent text-sm"></i>
+                    </div>
+                    <span class="font-bold text-lg tracking-tight">CRISIS-X<span class="text-accent"> AI</span></span>
+                </div>
+                <p class="text-sm text-muted leading-relaxed">Real-time financial crisis early warning platform powered by AI.</p>
+            </div>
+            <div>
+                <h4 class="font-semibold text-sm mb-4">Product</h4>
+                <ul class="space-y-2 text-sm text-muted">
+                    <li><a href="#features" class="hover:text-fg transition-colors">Features</a></li>
+                    <li><a href="#alerts" class="hover:text-fg transition-colors">Alert Engine</a></li>
+                    <li><a href="#" class="hover:text-fg transition-colors">API Access</a></li>
+                    <li><a href="#" class="hover:text-fg transition-colors">Pricing</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold text-sm mb-4">Resources</h4>
+                <ul class="space-y-2 text-sm text-muted">
+                    <li><a href="#" class="hover:text-fg transition-colors">Documentation</a></li>
+                    <li><a href="#" class="hover:text-fg transition-colors">Research Papers</a></li>
+                    <li><a href="#" class="hover:text-fg transition-colors">Blog</a></li>
+                    <li><a href="#" class="hover:text-fg transition-colors">Status</a></li>
+                </ul>
+            </div>
+            <div>
+                <h4 class="font-semibold text-sm mb-4">Connect</h4>
+                <div class="flex gap-3">
+                    <a href="#" class="w-9 h-9 rounded-lg bg-card border border-border flex items-center justify-center text-muted hover:text-fg hover:border-muted transition-all" aria-label="GitHub">
+                        <i class="fab fa-github text-sm"></i>
+                    </a>
+                    <a href="#" class="w-9 h-9 rounded-lg bg-card border border-border flex items-center justify-center text-muted hover:text-fg hover:border-muted transition-all" aria-label="Twitter">
+                        <i class="fab fa-twitter text-sm"></i>
+                    </a>
+                    <a href="#" class="w-9 h-9 rounded-lg bg-card border border-border flex items-center justify-center text-muted hover:text-fg hover:border-muted transition-all" aria-label="LinkedIn">
+                        <i class="fab fa-linkedin-in text-sm"></i>
+                    </a>
+                    <a href="#" class="w-9 h-9 rounded-lg bg-card border border-border flex items-center justify-center text-muted hover:text-fg hover:border-muted transition-all" aria-label="Discord">
+                        <i class="fab fa-discord text-sm"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-border pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p class="text-xs text-muted">2025 CRISIS-X AI. Built for hackathon. Not financial advice.</p>
+            <p class="text-xs text-muted">Designed to impress judges in 3 seconds.</p>
+        </div>
+    </div>
+</footer>
+
+<script>
+// ===== PARTICLE BACKGROUND =====
+(function() {
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let w, h;
+
+    function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    // Create particles — small dots that drift upward like data streams
+    function createParticle() {
+        return {
+            x: Math.random() * w,
+            y: h + Math.random() * 100,
+            vx: (Math.random() - 0.5) * 0.3,
+            vy: -(0.3 + Math.random() * 0.7),
+            size: Math.random() * 1.5 + 0.5,
+            alpha: Math.random() * 0.3 + 0.1,
+            color: Math.random() > 0.7 ? '#ff3b3b' : (Math.random() > 0.5 ? '#ffb800' : '#00e87b')
+        };
+    }
+
+    for (let i = 0; i < 80; i++) {
+        const p = createParticle();
+        p.y = Math.random() * h;
+        particles.push(p);
+    }
+
+    function animate() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.y < -10) {
+                Object.assign(p, createParticle());
+            }
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, Math.max(0.1, p.size), 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.alpha;
+            ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+        requestAnimationFrame(animate);
+    }
+    animate();
+})();
+
+// ===== TICKER TAPE =====
+(function() {
+    const tickerData = [
+        { symbol: 'S&P 500', value: '5,423.50', change: '-1.2%', up: false },
+        { symbol: 'NIFTY 50', value: '22,865.10', change: '+0.4%', up: true },
+        { symbol: 'VIX', value: '28.34', change: '+18.3%', up: false },
+        { symbol: 'US 10Y', value: '4.62%', change: '+3.2%', up: false },
+        { symbol: 'GOLD', value: '2,412.80', change: '+0.8%', up: true },
+        { symbol: 'USD/INR', value: '83.42', change: '-0.3%', up: true },
+        { symbol: 'OIL (WTI)', value: '78.15', change: '-2.1%', up: false },
+        { symbol: 'BTC', value: '67,230', change: '+1.5%', up: true },
+        { symbol: 'JPM', value: '192.34', change: '-4.8%', up: false },
+        { symbol: 'HDFC', value: '1,645.20', change: '+0.9%', up: true },
+        { symbol: 'EUR/USD', value: '1.0823', change: '-0.5%', up: false },
+        { symbol: 'US 2Y', value: '4.98%', change: '+1.1%', up: false },
+    ];
+
+    const container = document.querySelector('.ticker-content');
+    let html = '';
+    // Duplicate for seamless loop
+    for (let round = 0; round < 2; round++) {
+        tickerData.forEach(t => {
+            const color = t.up ? 'text-safe' : 'text-accent';
+            const icon = t.up ? 'fa-caret-up' : 'fa-caret-down';
+            html += `<span class="inline-flex items-center gap-2 mx-6">
+                <span class="text-muted">${t.symbol}</span>
+                <span class="text-fg font-medium">${t.value}</span>
+                <span class="${color}"><i class="fas ${icon}"></i> ${t.change}</span>
+            </span>`;
+        });
+    }
+    container.innerHTML = html;
+})();
+
+// ===== MINI BAR CHARTS =====
+function createMiniBars(containerId, color, values) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    values.forEach((v, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'mini-bar rounded-sm flex-1';
+        bar.style.height = '0px';
+        bar.style.background = color;
+        bar.style.opacity = '0.6';
+        bar.style.minWidth = '4px';
+        container.appendChild(bar);
+        setTimeout(() => {
+            bar.style.height = v + 'px';
+        }, 100 + i * 80);
+    });
+}
+
+createMiniBars('bankBars', '#ff3b3b', [12, 18, 14, 22, 28, 24, 32, 36]);
+createMiniBars('marketBars', '#ffb800', [10, 14, 8, 16, 12, 20, 18, 14]);
+createMiniBars('liquidBars', '#ff3b3b', [16, 24, 20, 32, 28, 36, 40, 38]);
+
+// Feature chart bars
+(function() {
+    const container = document.getElementById('featChart1');
+    if (!container) return;
+    const vals = [20, 35, 25, 45, 30, 55, 40, 60, 48, 65, 50, 70];
+    vals.forEach((v, i) => {
+        const bar = document.createElement('div');
+        bar.className = 'mini-bar rounded-sm flex-1';
+        bar.style.height = '0px';
+        bar.style.background = i > 8 ? '#ff3b3b' : '#ffb800';
+        bar.style.opacity = '0.5';
+        bar.style.minWidth = '3px';
+        container.appendChild(bar);
+        setTimeout(() => { bar.style.height = v + '%'; }, 200 + i * 60);
+    });
+})();
+
+// ===== HERO SCORE ANIMATION =====
+(function() {
+    const target = 61;
+    const el = document.getElementById('heroScore');
+    let current = 0;
+    const duration = 2000;
+    const start = performance.now();
+
+    function step(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        // Easing: ease-out cubic
+        const ease = 1 - Math.pow(1 - progress, 3);
+        current = Math.round(ease * target);
+        el.textContent = current;
+        if (progress < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+})();
+
+// ===== STAT COUNTER ANIMATION =====
+function animateCounters() {
+    document.querySelectorAll('.stat-value[data-target]').forEach(el => {
+        if (el.dataset.animated) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.top < window.innerHeight * 0.85) {
+            el.dataset.animated = 'true';
+            const target = parseInt(el.dataset.target);
+            let current = 0;
+            const duration = 1500;
+            const start = performance.now();
+            function step(now) {
+                const elapsed = now - start;
+                const progress = Math.min(elapsed / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                current = Math.round(ease * target);
+                el.textContent = current;
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            requestAnimationFrame(step);
+        }
+    });
+}
+
+// ===== FADE IN UP OBSERVER =====
+const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+        if (e.isIntersecting) {
+            e.target.classList.add('visible');
+        }
+    });
+}, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+document.querySelectorAll('.fade-in-up').forEach(el => observer.observe(el));
+
+// Counter observer
+const counterObserver = new IntersectionObserver(() => animateCounters(), { threshold: 0.3 });
+document.querySelectorAll('.stat-value[data-target]').forEach(el => counterObserver.observe(el));
+
+// ===== AI TYPING EFFECT =====
+(function() {
+    const text = "Similar stress pattern detected before the 2008 financial crisis. Bond yield spike of +3.2% matches the pre-Lehman signature. Combined with bank stock decline and VIX surge, the current signal confidence is HIGH. Recommend immediate portfolio stress test and liquidity buffer increase.";
+    const el = document.getElementById('aiTyping');
+    let index = 0;
+
+    function type() {
+        if (index <= text.length) {
+            el.textContent = text.slice(0, index);
+            index++;
+            setTimeout(type, 18 + Math.random() * 25);
+        }
+    }
+
+    // Start typing when section is visible
+    const typeObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) {
+            typeObserver.disconnect();
+            setTimeout(type, 500);
+        }
+    }, { threshold: 0.3 });
+    typeObserver.observe(el.closest('section') || el);
+})();
+
+// ===== MINI TIMELINE CHART (2008 VIX) =====
+(function() {
+    const canvas = document.getElementById('miniTimeline');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // Simulated VIX data for 2008 (12 months, monthly)
+    const data = [22, 24, 26, 23, 20, 24, 28, 36, 55, 70, 62, 48];
+    const max = Math.max(...data);
+    const min = Math.min(...data);
+    const pad = { top: 10, bottom: 10, left: 10, right: 10 };
+    const plotW = W - pad.left - pad.right;
+    const plotH = H - pad.top - pad.bottom;
+
+    // Draw grid lines
+    ctx.strokeStyle = '#1e1e2e';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+        const y = pad.top + (plotH / 3) * i;
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(W - pad.right, y);
+        ctx.stroke();
+    }
+
+    // Draw line
+    ctx.beginPath();
+    data.forEach((v, i) => {
+        const x = pad.left + (plotW / (data.length - 1)) * i;
+        const y = pad.top + plotH - ((v - min) / (max - min)) * plotH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = '#ff3b3b';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Fill area under curve
+    const lastX = pad.left + plotW;
+    const lastY = pad.top + plotH - ((data[data.length - 1] - min) / (max - min)) * plotH;
+    ctx.lineTo(lastX, H - pad.bottom);
+    ctx.lineTo(pad.left, H - pad.bottom);
+    ctx.closePath();
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, 'rgba(255,59,59,0.25)');
+    grad.addColorStop(1, 'rgba(255,59,59,0)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Alert marker (August = index 7)
+    const alertIdx = 7;
+    const ax = pad.left + (plotW / (data.length - 1)) * alertIdx;
+    const ay = pad.top + plotH - ((data[alertIdx] - min) / (max - min)) * plotH;
+    ctx.beginPath();
+    ctx.arc(ax, ay, 6, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff3b3b';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ax, ay, 10, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,59,59,0.4)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Label
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.fillStyle = '#ff3b3b';
+    ctx.textAlign = 'center';
+    ctx.fillText('AI ALERT', ax, ay - 16);
+})();
+
+// ===== TOAST SYSTEM =====
+let toastTimeout = null;
+function showToastMsg(msg) {
+    const toast = document.getElementById('toast');
+    const msgEl = document.getElementById('toastMsg');
+    msgEl.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => toast.classList.remove('show'), 4000);
+}
+function hideToast() {
+    document.getElementById('toast').classList.remove('show');
+    clearTimeout(toastTimeout);
+}
+
+// Auto-show alert toast after 5 seconds
+setTimeout(() => showToastMsg('USA Banking Risk rose to 72%'), 5000);
+
+// ===== SMOOTH NAV SCROLL =====
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', e => {
+        e.preventDefault();
+        const target = document.querySelector(link.getAttribute('href'));
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+});
+
+// ===== NAV BACKGROUND ON SCROLL =====
+window.addEventListener('scroll', () => {
+    const nav = document.querySelector('nav');
+    if (window.scrollY > 50) {
+        nav.style.borderBottomColor = 'rgba(30,30,46,0.8)';
+    } else {
+        nav.style.borderBottomColor = 'rgba(30,30,46,0.3)';
+    }
+});
+</script>
+<script>
+function goToDashboard() {
+    window.location.href = localStorage.getItem('crisisx_token') ? 'Dashboard.html' : 'login.html';
+}
+</script>
+</body>
+</html>

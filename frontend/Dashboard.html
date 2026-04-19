@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRISIS-X AI — Financial Risk Intelligence</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+:root[data-theme="dark"] {
+  --bg: #09090b;
+  --bg-sec: #0c0c0f;
+  --surface: #111114;
+  --surface-el: #16161a;
+  --surface-hov: #1c1c21;
+  --border: #1f1f23;
+  --border-sub: #18181b;
+  --border-str: #27272a;
+  --fg: #fafafa;
+  --fg-muted: #a1a1aa;
+  --fg-subtle: #71717a;
+  --accent: #ef4444;
+  --accent-muted: #dc2626;
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+  --sidebar-bg: #111114;
+  --header-bg: rgba(9,9,11,0.85);
+  --card-bg: rgba(17,17,20,0.75);
+  --tooltip-bg: #16161a;
+}
+:root[data-theme="light"] {
+  --bg: #f4f4f5;
+  --bg-sec: #e4e4e7;
+  --surface: #ffffff;
+  --surface-el: #f4f4f5;
+  --surface-hov: #e4e4e7;
+  --border: #d4d4d8;
+  --border-sub: #e4e4e7;
+  --border-str: #a1a1aa;
+  --fg: #09090b;
+  --fg-muted: #3f3f46;
+  --fg-subtle: #71717a;
+  --accent: #dc2626;
+  --accent-muted: #b91c1c;
+  --success: #16a34a;
+  --warning: #d97706;
+  --info: #2563eb;
+  --sidebar-bg: #ffffff;
+  --header-bg: rgba(244,244,245,0.9);
+  --card-bg: rgba(255,255,255,0.9);
+  --tooltip-bg: #f4f4f5;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { height:100%; }
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--fg); overflow-x:hidden; transition:background 0.3s, color 0.3s; }
+
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--border-str); border-radius:10px; }
+::-webkit-scrollbar-thumb:hover { background:var(--fg-subtle); }
+
+/* THEME TOGGLE */
+.theme-toggle { background:var(--surface-el); border:1px solid var(--border); color:var(--fg-muted); width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; }
+.theme-toggle:hover { color:var(--fg); border-color:var(--border-str); }
+
+/* LAYOUT */
+.app-layout { display:flex; min-height:100vh; }
+
+/* SIDEBAR */
+.sidebar {
+  position:fixed; left:0; top:0; height:100vh; width:72px;
+  background:var(--sidebar-bg); border-right:1px solid var(--border);
+  display:flex; flex-direction:column; z-index:50;
+  transition:width 0.3s cubic-bezier(0.4,0,0.2,1), background 0.3s;
+}
+.sidebar.expanded { width:220px; }
+.sidebar-logo { height:64px; display:flex; align-items:center; justify-content:center; border-bottom:1px solid var(--border); flex-shrink:0; overflow:hidden; padding:0 16px; }
+.sidebar-logo .logo-icon { width:40px; height:40px; min-width:40px; border-radius:12px; background:rgba(239,68,68,0.12); display:flex; align-items:center; justify-content:center; color:var(--accent); font-size:16px; }
+.sidebar-logo .logo-text { margin-left:12px; white-space:nowrap; overflow:hidden; opacity:0; transform:translateX(-8px); transition:all 0.25s ease; pointer-events:none; }
+.sidebar.expanded .logo-text { opacity:1; transform:translateX(0); }
+.logo-text .brand { font-size:14px; font-weight:800; letter-spacing:0.05em; color:var(--fg); }
+.logo-text .sub { font-size:10px; color:var(--fg-subtle); margin-top:1px; }
+
+.sidebar nav { flex:1; padding:12px 8px; overflow-y:auto; overflow-x:hidden; }
+.sidebar nav ul { list-style:none; display:flex; flex-direction:column; gap:4px; }
+.nav-item { position:relative; }
+.nav-item a {
+  display:flex; align-items:center; height:48px; border-radius:12px;
+  color:var(--fg-subtle); text-decoration:none; cursor:pointer;
+  transition:all 0.2s ease; overflow:hidden; white-space:nowrap;
+  padding:0 14px;
+}
+.nav-item a::before {
+  content:''; position:absolute; left:0; top:50%; transform:translateY(-50%);
+  width:3px; height:0; background:var(--accent); border-radius:0 3px 3px 0; transition:height 0.2s ease;
+}
+.nav-item.active a::before, .nav-item a:hover::before { height:55%; }
+.nav-item.active a { background:rgba(239,68,68,0.08); color:var(--accent); }
+.nav-item a:hover:not(.nav-item.active a) { background:var(--surface-hov); color:var(--fg); }
+.nav-item .nav-icon { width:20px; min-width:20px; text-align:center; font-size:16px; }
+.nav-item .nav-label { margin-left:12px; font-size:13px; font-weight:500; opacity:0; transform:translateX(-8px); transition:all 0.25s ease; pointer-events:none; }
+.sidebar.expanded .nav-item .nav-label { opacity:1; transform:translateX(0); }
+.nav-item .nav-badge { position:absolute; top:10px; left:27px; width:8px; height:8px; background:var(--accent); border-radius:50%; border:2px solid var(--sidebar-bg); transition:left 0.3s; }
+.sidebar.expanded .nav-item .nav-badge { left:auto; right:12px; top:50%; transform:translateY(-50%); width:20px; height:20px; border-radius:10px; font-size:10px; font-weight:700; color:#fff; display:flex; align-items:center; justify-content:center; border:none; }
+
+.sidebar-footer { padding:12px 8px; border-top:1px solid var(--border); flex-shrink:0; }
+.sidebar-footer ul { list-style:none; display:flex; flex-direction:column; gap:4px; }
+
+.sidebar-toggle { position:fixed; left:60px; top:50%; transform:translateY(-50%); z-index:51; width:24px; height:24px; background:var(--surface-el); border:1px solid var(--border); border-radius:50%; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--fg-subtle); font-size:10px; transition:all 0.3s ease; }
+.sidebar-toggle:hover { color:var(--fg); border-color:var(--border-str); }
+.sidebar.expanded ~ .sidebar-toggle { left:208px; }
+
+/* MAIN */
+.main-content { margin-left:72px; min-height:100vh; display:flex; flex-direction:column; transition:margin-left 0.3s; }
+.sidebar.expanded ~ * .main-content, body.sidebar-open .main-content { margin-left:220px; }
+
+/* HEADER */
+.top-header { position:sticky; top:0; z-index:40; height:64px; background:var(--header-bg); backdrop-filter:blur(20px); border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; padding:0 24px; gap:16px; transition:background 0.3s; }
+.header-left { display:flex; align-items:center; gap:12px; }
+.page-title { font-size:17px; font-weight:700; color:var(--fg); }
+.live-badge { display:flex; align-items:center; gap:6px; padding:4px 10px; background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.2); border-radius:999px; }
+.live-badge .dot { width:6px; height:6px; background:var(--success); border-radius:50%; animation:pulse 2s infinite; }
+.live-badge span { font-size:11px; font-weight:500; color:var(--success); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.header-right { display:flex; align-items:center; gap:12px; }
+.header-search { position:relative; }
+.header-search input { width:200px; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:8px 12px 8px 36px; font-size:13px; color:var(--fg); outline:none; transition:all 0.2s; }
+.header-search input::placeholder { color:var(--fg-subtle); }
+.header-search input:focus { border-color:var(--border-str); width:240px; }
+.header-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--fg-subtle); font-size:12px; }
+.header-select { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:7px 28px 7px 12px; font-size:13px; color:var(--fg-muted); outline:none; cursor:pointer; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; }
+.notif-btn { position:relative; width:38px; height:38px; background:var(--surface); border:1px solid var(--border); border-radius:10px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--fg-muted); transition:all 0.2s; }
+.notif-btn:hover { color:var(--fg); border-color:var(--border-str); }
+.notif-btn .badge { position:absolute; top:-4px; right:-4px; width:18px; height:18px; background:var(--accent); border-radius:50%; font-size:9px; font-weight:700; color:#fff; display:flex; align-items:center; justify-content:center; border:2px solid var(--bg); }
+.user-avatar { display:flex; align-items:center; gap:10px; cursor:pointer; }
+.avatar-circle { width:36px; height:36px; border-radius:10px; background:linear-gradient(135deg, var(--accent), var(--warning)); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:#fff; }
+
+/* PAGE CONTENT */
+.page-content { flex:1; padding:24px; display:none; }
+.page-content.active { display:block; }
+
+/* GRID PATTERN */
+.grid-pattern { background-image:linear-gradient(var(--border-sub) 1px, transparent 1px), linear-gradient(90deg, var(--border-sub) 1px, transparent 1px); background-size:40px 40px; }
+
+/* CARDS */
+.card { background:var(--card-bg); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(12px); transition:background 0.3s, border-color 0.3s; }
+.card:hover { border-color:var(--border-str); }
+.stat-card { transition:all 0.25s cubic-bezier(0.4,0,0.2,1); }
+.stat-card:hover { transform:translateY(-3px); }
+
+/* TICKER */
+.ticker-wrap { overflow:hidden; white-space:nowrap; background:var(--surface); border-bottom:1px solid var(--border); padding:8px 0; }
+.ticker-content { display:inline-block; animation:tickerScroll 50s linear infinite; font-family:'JetBrains Mono',monospace; font-size:12px; }
+@keyframes tickerScroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.ticker-item { display:inline-flex; align-items:center; gap:6px; margin:0 24px; }
+
+/* NAV ITEM ACTIVE INDICATOR (sidebar expanded badge count) */
+@keyframes badge-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.25)} }
+.badge-pulse-anim { animation:badge-pulse 1.5s ease-in-out infinite; }
+
+/* RANGE BUTTONS */
+.range-btn { padding:5px 12px; font-size:12px; font-weight:500; border-radius:8px; cursor:pointer; border:none; background:transparent; color:var(--fg-muted); transition:all 0.2s; }
+.range-btn.active { background:rgba(239,68,68,0.1); color:var(--accent); }
+.range-btn:not(.active):hover { background:var(--surface-hov); color:var(--fg); }
+
+/* RISK GAUGE RING */
+@keyframes pulse-ring { 0%{transform:scale(1); opacity:0.4} 50%{transform:scale(1.15); opacity:0.1} 100%{transform:scale(1); opacity:0.4} }
+.pulse-ring { animation:pulse-ring 2.5s ease-in-out infinite; }
+
+/* COUNTRY HOVER */
+.country-path { transition:filter 0.2s; cursor:pointer; }
+.country-path:hover { filter:brightness(1.5) saturate(1.2); }
+
+/* ALERT CARDS */
+.alert-card { transition:all 0.2s; cursor:pointer; }
+.alert-card:hover { background:var(--surface-hov) !important; }
+
+/* CHAT WIDGET */
+@keyframes slideUp { from{opacity:0;transform:translateY(20px) scale(0.96)} to{opacity:1;transform:translateY(0) scale(1)} }
+.chat-window { box-shadow:0 25px 60px -10px rgba(0,0,0,0.4); }
+.chat-window.show { animation:slideUp 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+@keyframes msgAppear { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.msg-appear { animation:msgAppear 0.3s ease forwards; }
+@keyframes typingDot { 0%,60%,100%{transform:translateY(0);opacity:0.4} 30%{transform:translateY(-4px);opacity:1} }
+.typing-dot { width:6px; height:6px; background:var(--fg-subtle); border-radius:50%; display:inline-block; margin:0 1px; animation:typingDot 1.2s infinite; }
+.typing-dot:nth-child(2) { animation-delay:0.15s; }
+.typing-dot:nth-child(3) { animation-delay:0.3s; }
+@keyframes pingDot { 75%,100%{transform:scale(2);opacity:0} }
+.ping-dot { animation:pingDot 1s cubic-bezier(0,0,0.2,1) infinite; }
+.chatbot-toggle { transition:all 0.3s cubic-bezier(0.4,0,0.2,1); }
+.chatbot-toggle:hover { transform:scale(1.06); box-shadow:0 0 30px -5px rgba(239,68,68,0.5); }
+
+/* PROGRESS BARS */
+.progress-bar { height:6px; background:var(--surface-hov); border-radius:999px; overflow:hidden; }
+.progress-fill { height:100%; border-radius:999px; transition:width 1s ease; }
+
+/* FADE IN */
+@keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+.fade-in { animation:fadeIn 0.4s ease-out; }
+
+/* TOAST */
+.toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(100px); background:var(--surface-el); border:1px solid var(--border); border-radius:12px; padding:12px 20px; display:flex; align-items:center; gap:10px; font-size:13px; color:var(--fg); z-index:200; transition:transform 0.4s cubic-bezier(0.34,1.56,0.64,1); box-shadow:0 8px 30px -5px rgba(0,0,0,0.3); pointer-events:none; }
+.toast.show { transform:translateX(-50%) translateY(0); pointer-events:all; }
+
+/* TABLES */
+table { width:100%; border-collapse:collapse; }
+th { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.05em; color:var(--fg-subtle); padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); }
+td { padding:12px; font-size:13px; color:var(--fg); border-bottom:1px solid var(--border-sub); }
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--surface-hov); }
+
+/* SECTION DIVIDER */
+.section-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:20px; }
+.section-title { font-size:16px; font-weight:700; color:var(--fg); }
+.section-sub { font-size:12px; color:var(--fg-subtle); margin-top:2px; }
+.view-all-btn { font-size:12px; font-weight:500; color:var(--accent); background:none; border:none; cursor:pointer; }
+.view-all-btn:hover { text-decoration:underline; }
+
+/* INDICATOR DOTS */
+.dot-red { width:8px; height:8px; background:var(--accent); border-radius:50%; }
+.dot-yellow { width:8px; height:8px; background:var(--warning); border-radius:50%; }
+.dot-green { width:8px; height:8px; background:var(--success); border-radius:50%; }
+
+/* CHIP BADGES */
+.chip { display:inline-flex; align-items:center; padding:3px 10px; border-radius:999px; font-size:11px; font-weight:600; }
+.chip-red { background:rgba(239,68,68,0.1); color:var(--accent); border:1px solid rgba(239,68,68,0.2); }
+.chip-yellow { background:rgba(245,158,11,0.1); color:var(--warning); border:1px solid rgba(245,158,11,0.2); }
+.chip-green { background:rgba(34,197,94,0.1); color:var(--success); border:1px solid rgba(34,197,94,0.2); }
+.chip-blue { background:rgba(59,130,246,0.1); color:var(--info); border:1px solid rgba(59,130,246,0.2); }
+
+/* STAT NUMBER */
+.stat-number { font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; color:var(--fg); }
+.stat-sub { font-size:12px; color:var(--fg-subtle); margin-top:4px; }
+.stat-trend { font-size:11px; font-weight:600; }
+.trend-up { color:var(--accent); }
+.trend-down { color:var(--success); }
+
+/* PAGE-SPECIFIC */
+.news-card { background:var(--surface-el); border:1px solid var(--border); border-radius:12px; padding:16px; transition:all 0.2s; }
+.news-card:hover { border-color:var(--border-str); transform:translateY(-2px); }
+.market-row { background:var(--surface-el); border-radius:10px; padding:12px; display:flex; align-items:center; justify-content:space-between; }
+.history-item { display:flex; gap:12px; padding:14px; background:var(--surface-el); border:1px solid var(--border); border-radius:12px; transition:all 0.2s; }
+.history-item:hover { border-color:var(--border-str); }
+.setting-row { display:flex; align-items:center; justify-content:space-between; padding:16px; background:var(--surface-el); border-radius:12px; border:1px solid var(--border); }
+
+/* TOGGLE SWITCH */
+.toggle-switch { position:relative; width:44px; height:24px; }
+.toggle-switch input { display:none; }
+.toggle-slider { position:absolute; inset:0; background:var(--border-str); border-radius:999px; cursor:pointer; transition:background 0.3s; }
+.toggle-slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:transform 0.3s; }
+.toggle-switch input:checked + .toggle-slider { background:var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform:translateX(20px); }
+
+/* BANK CARDS */
+.bank-card { background:var(--surface-el); border:1px solid var(--border); border-radius:14px; padding:18px; transition:all 0.25s; }
+.bank-card:hover { transform:translateY(-2px); border-color:var(--border-str); }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .main-content { margin-left:72px; }
+  .header-search { display:none; }
+  .header-select { display:none; }
+}
+</style>
+</head>
+<body class="grid-pattern">
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+    <div class="logo-text">
+      <div class="brand">CRISIS-X</div>
+      <div class="sub">AI Risk Platform</div>
+    </div>
+  </div>
+  <nav>
+    <ul>
+      <li class="nav-item active" data-page="dashboard">
+        <a href="#" onclick="showPage('dashboard',this)">
+          <span class="nav-icon"><i class="fas fa-th-large"></i></span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+      </li>
+      <li class="nav-item" data-page="markets">
+        <a href="#" onclick="showPage('markets',this)">
+          <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+          <span class="nav-label">Markets</span>
+        </a>
+      </li>
+      <li class="nav-item" data-page="banks">
+        <a href="#" onclick="showPage('banks',this)">
+          <span class="nav-icon"><i class="fas fa-university"></i></span>
+          <span class="nav-label">Banks</span>
+        </a>
+      </li>
+      <li class="nav-item" data-page="liquidity">
+        <a href="#" onclick="showPage('liquidity',this)">
+          <span class="nav-icon"><i class="fas fa-tint"></i></span>
+          <span class="nav-label">Liquidity</span>
+        </a>
+      </li>
+      <li class="nav-item" data-page="alerts">
+        <a href="alert.html" onclick="showPage('alerts',this)">
+          <span class="nav-icon"><i class="fas fa-bell"></i></span>
+          <span class="nav-label">Alerts</span>
+          <span class="nav-badge badge-pulse-anim" id="alertBadge">3</span>
+        </a>
+      </li>
+      <li class="nav-item" data-page="news">
+        <a href="#" onclick="showPage('news',this)">
+          <span class="nav-icon"><i class="fas fa-newspaper"></i></span>
+          <span class="nav-label">News</span>
+        </a>
+      </li>
+      <li class="nav-item" data-page="history">
+        <a href="history.html" onclick="showPage('history',this)">
+          <span class="nav-icon"><i class="fas fa-history"></i></span>
+          <span class="nav-label">History</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+  <div class="sidebar-footer">
+    <ul>
+      <li class="nav-item" data-page="settings">
+        <a href="#" onclick="showPage('settings',this)">
+          <span class="nav-icon"><i class="fas fa-cog"></i></span>
+          <span class="nav-label">Settings</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a href="#">
+          <span class="nav-icon"><i class="fas fa-sign-out-alt"></i></span>
+          <span class="nav-label">Logout</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+</aside>
+
+<!-- SIDEBAR TOGGLE -->
+<button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+  <i class="fas fa-chevron-right" id="toggleIcon"></i>
+</button>
+
+<!-- MAIN -->
+<div class="main-content" id="mainContent">
+
+  <!-- TICKER -->
+  <div class="ticker-wrap">
+    <div class="ticker-content">
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">S&P 500</span> <span style="color:var(--accent)">5,423.50 ▼ -1.2%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">NASDAQ</span> <span style="color:var(--accent)">17,842 ▼ -0.8%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">DOW</span> <span style="color:var(--success)">38,921 ▲ +0.3%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">VIX</span> <span style="color:var(--accent)">28.4 ▲ +18.2%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">Gold</span> <span style="color:var(--success)">$2,412 ▲ +0.8%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">Oil WTI</span> <span style="color:var(--accent)">$78.15 ▼ -2.1%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">BTC/USD</span> <span style="color:var(--success)">$67,420 ▲ +3.4%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">EUR/USD</span> <span style="color:var(--success)">1.0854 ▲ +0.2%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">USD/INR</span> <span style="color:var(--accent)">83.42 ▼ -0.3%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">US 10Y</span> <span style="color:var(--accent)">4.62% ▲ +0.3%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">NIFTY 50</span> <span style="color:var(--success)">22,865 ▲ +0.4%</span></span>
+      <span class="ticker-item" style="color:var(--accent);font-weight:600">⚠ HIGH RISK: USA Banking 72%</span>
+      <!-- duplicate for seamless loop -->
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">S&P 500</span> <span style="color:var(--accent)">5,423.50 ▼ -1.2%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">NASDAQ</span> <span style="color:var(--accent)">17,842 ▼ -0.8%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">DOW</span> <span style="color:var(--success)">38,921 ▲ +0.3%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">VIX</span> <span style="color:var(--accent)">28.4 ▲ +18.2%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">Gold</span> <span style="color:var(--success)">$2,412 ▲ +0.8%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">Oil WTI</span> <span style="color:var(--accent)">$78.15 ▼ -2.1%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">BTC/USD</span> <span style="color:var(--success)">$67,420 ▲ +3.4%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">EUR/USD</span> <span style="color:var(--success)">1.0854 ▲ +0.2%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">USD/INR</span> <span style="color:var(--accent)">83.42 ▼ -0.3%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">US 10Y</span> <span style="color:var(--accent)">4.62% ▲ +0.3%</span></span>
+      <span class="ticker-item"><span style="color:var(--fg-subtle)">NIFTY 50</span> <span style="color:var(--success)">22,865 ▲ +0.4%</span></span>
+      <span class="ticker-item" style="color:var(--accent);font-weight:600">⚠ HIGH RISK: USA Banking 72%</span>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="top-header">
+    <div class="header-left" style="display:flex;align-items:center;gap:10px;">
+      <button id="mobileMenuBtn" onclick="openMobileSidebar()" style="display:none;width:36px;height:36px;border-radius:8px;background:var(--surface);border:1px solid var(--border);align-items:center;justify-content:center;cursor:pointer;color:var(--fg-muted);flex-shrink:0;">
+        <i class="fas fa-bars" style="font-size:13px;"></i>
+      </button>
+      <h1 class="page-title" id="pageTitle">Risk Dashboard</h1>
+      <div class="live-badge"><div class="dot"></div><span>Live</span></div>
+    </div>
+    <div class="header-right">
+      <select class="header-select" id="timeRange">
+        <option>Last 24 Hours</option><option>Last 7 Days</option><option>Last 30 Days</option><option>Last 90 Days</option>
+      </select>
+      <div class="header-search">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Search...">
+      </div>
+      <div class="notif-btn" onclick="showPage('alerts', document.querySelector('[data-page=alerts] a'))">
+        <i class="fas fa-bell"></i>
+        <span class="badge">3</span>
+      </div>
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" id="themeBtn">
+        <i class="fas fa-moon" id="themeIcon"></i>
+      </button>
+      <div class="user-avatar">
+        <div class="avatar-circle" data-user-avatar>?</div>
+        <div style="display:none" class="md:block">
+          <p style="font-size:13px;font-weight:600" data-user-name>User</p>
+          <p style="font-size:11px;color:var(--fg-subtle)">Analyst</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== DASHBOARD PAGE ==================== -->
+  <div class="page-content active fade-in" id="page-dashboard">
+    <div style="display:grid; gap:24px;">
+
+      <!-- ROW 1 -->
+      <div style="display:grid; grid-template-columns:1fr 2fr; gap:24px;">
+        <!-- Risk Score Card -->
+        <div class="card" style="padding:24px; position:relative; overflow:hidden;">
+          <div style="position:absolute;top:0;right:0;width:160px;height:160px;background:rgba(239,68,68,0.05);border-radius:50%;filter:blur(40px);transform:translate(40%,-40%)"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+            <div>
+              <p style="font-size:12px;color:var(--fg-subtle)">Global Risk Score</p>
+              <p style="font-size:11px;color:var(--fg-subtle);margin-top:2px;">Updated 2 min ago</p>
+            </div>
+            <span class="chip chip-red">HIGH RISK</span>
+          </div>
+          <div style="display:flex;justify-content:center;margin-bottom:20px;">
+            <div style="position:relative;">
+              <div class="pulse-ring" style="position:absolute;inset:0;border-radius:50%;border:12px solid transparent;border-top-color:rgba(239,68,68,0.15);border-right-color:rgba(239,68,68,0.15);"></div>
+              <svg width="176" height="176" style="transform:rotate(-90deg)">
+                <circle cx="88" cy="88" r="76" fill="none" stroke="var(--surface-hov)" stroke-width="12"/>
+                <circle cx="88" cy="88" r="76" fill="none" stroke="url(#rg1)" stroke-width="12" stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="186"/>
+                <defs>
+                  <linearGradient id="rg1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#22c55e"/>
+                    <stop offset="50%" stop-color="#f59e0b"/>
+                    <stop offset="100%" stop-color="#ef4444"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                <span style="font-size:44px;font-weight:800;color:var(--accent);font-variant-numeric:tabular-nums;" id="dashRiskScore">61</span>
+                <span style="font-size:12px;color:var(--fg-subtle);margin-top:2px;">/ 100</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;"><div class="dot-red"></div><span style="font-size:13px;color:var(--fg-muted)">Banking</span></div>
+              <div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:96px;"><div class="progress-fill" style="width:78%;background:var(--accent)"></div></div><span style="font-size:13px;font-weight:600;color:var(--accent);width:36px;text-align:right">78%</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;"><div class="dot-yellow"></div><span style="font-size:13px;color:var(--fg-muted)">Market</span></div>
+              <div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:96px;"><div class="progress-fill" style="width:62%;background:var(--warning)"></div></div><span style="font-size:13px;font-weight:600;color:var(--warning);width:36px;text-align:right">62%</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;"><div class="dot-red"></div><span style="font-size:13px;color:var(--fg-muted)">Liquidity</span></div>
+              <div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:96px;"><div class="progress-fill" style="width:85%;background:var(--accent)"></div></div><span style="font-size:13px;font-weight:600;color:var(--accent);width:36px;text-align:right">85%</span></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;align-items:center;gap:8px;"><div class="dot-yellow"></div><span style="font-size:13px;color:var(--fg-muted)">Sentiment</span></div>
+              <div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:96px;"><div class="progress-fill" style="width:54%;background:var(--warning)"></div></div><span style="font-size:13px;font-weight:600;color:var(--warning);width:36px;text-align:right">54%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;align-content:start;">
+          <div class="card stat-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-globe" style="color:var(--accent)"></i></div><span class="stat-trend trend-up"><i class="fas fa-arrow-up" style="font-size:9px"></i> +3</span></div>
+            <div class="stat-number">20</div><div class="stat-sub">Countries at Risk</div>
+          </div>
+          <div class="card stat-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-exclamation-triangle" style="color:var(--warning)"></i></div><span class="stat-trend trend-up"><i class="fas fa-arrow-up" style="font-size:9px"></i> +5</span></div>
+            <div class="stat-number">12</div><div class="stat-sub">Active Alerts</div>
+          </div>
+          <div class="card stat-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-shield-alt" style="color:var(--success)"></i></div><span class="stat-trend trend-down"><i class="fas fa-check" style="font-size:9px"></i> OK</span></div>
+            <div class="stat-number">8</div><div class="stat-sub">Safe Countries</div>
+          </div>
+          <div class="card stat-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-bar" style="color:var(--accent)"></i></div><span class="stat-trend trend-up"><i class="fas fa-arrow-up" style="font-size:9px"></i> +0.3%</span></div>
+            <div class="stat-number" style="font-size:22px;">4.62<span style="font-size:16px;">%</span></div><div class="stat-sub">US 10Y Yield</div>
+          </div>
+          <div class="card stat-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-line" style="color:var(--accent)"></i></div><span class="stat-trend trend-up"><i class="fas fa-arrow-down" style="font-size:9px"></i> -1.2%</span></div>
+            <div class="stat-number" style="font-size:22px;">5,423</div><div class="stat-sub">S&P 500</div>
+          </div>
+          <div class="card stat-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-newspaper" style="color:var(--accent)"></i></div><span class="stat-trend trend-up"><i class="fas fa-arrow-down" style="font-size:9px"></i> -24%</span></div>
+            <div class="stat-number" style="color:var(--accent);font-size:18px;">Negative</div><div class="stat-sub">Market Sentiment</div>
+          </div>
+          <div class="card stat-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-coins" style="color:var(--warning)"></i></div><span class="stat-trend trend-down"><i class="fas fa-arrow-up" style="font-size:9px"></i> +0.8%</span></div>
+            <div class="stat-number" style="font-size:20px;">$2,412</div><div class="stat-sub">Gold / oz</div>
+          </div>
+          <div class="card stat-card" style="padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-percentage" style="color:var(--info)"></i></div><span class="stat-trend trend-up"><i class="fas fa-arrow-up" style="font-size:9px"></i> +18%</span></div>
+            <div class="stat-number" style="font-size:22px;">28.4</div><div class="stat-sub">VIX Index</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 2: Heatmap + Top Countries -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+        <div class="card" style="padding:24px;">
+          <div class="section-header">
+            <div><div class="section-title">Global Risk Heatmap</div><div class="section-sub">Real-time country risk distribution</div></div>
+            <div style="display:flex;align-items:center;gap:16px;">
+              <div style="display:flex;align-items:center;gap:6px;"><div class="dot-green"></div><span style="font-size:11px;color:var(--fg-subtle)">Low</span></div>
+              <div style="display:flex;align-items:center;gap:6px;"><div class="dot-yellow"></div><span style="font-size:11px;color:var(--fg-subtle)">Medium</span></div>
+              <div style="display:flex;align-items:center;gap:6px;"><div class="dot-red"></div><span style="font-size:11px;color:var(--fg-subtle)">High</span></div>
+            </div>
+          </div>
+          <div style="position:relative;background:var(--surface-el);border-radius:12px;overflow:hidden;aspect-ratio:2/1;">
+            <svg viewBox="0 0 1000 500" style="width:100%;height:100%;">
+              <path class="country-path" data-country="USA" data-risk="72" d="M150,120 L280,100 L300,150 L280,200 L220,210 L180,180 L140,150 Z" fill="#ef4444"/>
+              <path class="country-path" data-country="Canada" data-risk="35" d="M150,60 L300,50 L320,100 L280,100 L150,120 Z" fill="#22c55e"/>
+              <path class="country-path" data-country="Mexico" data-risk="48" d="M140,200 L220,210 L200,260 L160,250 L130,220 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="Brazil" data-risk="52" d="M260,280 L340,260 L360,340 L320,400 L260,380 L240,320 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="Argentina" data-risk="68" d="M260,380 L320,400 L300,470 L260,480 L240,420 Z" fill="#ef4444"/>
+              <path class="country-path" data-country="UK" data-risk="45" d="M440,100 L460,95 L465,120 L450,130 L435,115 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="Germany" data-risk="38" d="M490,110 L520,105 L530,140 L510,150 L485,140 Z" fill="#22c55e"/>
+              <path class="country-path" data-country="France" data-risk="42" d="M450,130 L490,125 L500,165 L465,175 L445,155 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="Italy" data-risk="55" d="M500,150 L520,145 L530,200 L510,210 L495,180 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="Spain" data-risk="40" d="M430,160 L470,155 L475,195 L440,200 L425,180 Z" fill="#22c55e"/>
+              <path class="country-path" data-country="Russia" data-risk="58" d="M520,60 L800,40 L850,120 L780,160 L600,140 L520,100 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="China" data-risk="61" d="M700,160 L820,150 L850,220 L800,260 L720,250 L680,200 Z" fill="#ef4444"/>
+              <path class="country-path" data-country="Japan" data-risk="32" d="M870,160 L900,155 L905,200 L885,210 L865,190 Z" fill="#22c55e"/>
+              <path class="country-path" data-country="India" data-risk="44" d="M660,220 L720,210 L740,300 L700,320 L660,280 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="South Korea" data-risk="36" d="M850,175 L870,170 L875,195 L860,200 L845,190 Z" fill="#22c55e"/>
+              <path class="country-path" data-country="Saudi Arabia" data-risk="50" d="M580,220 L640,210 L660,280 L620,300 L570,260 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="South Africa" data-risk="56" d="M520,380 L580,370 L590,430 L540,450 L510,410 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="Nigeria" data-risk="65" d="M480,300 L530,290 L540,340 L500,350 L470,320 Z" fill="#ef4444"/>
+              <path class="country-path" data-country="Egypt" data-risk="48" d="M540,220 L580,210 L590,260 L560,270 L530,245 Z" fill="#f59e0b"/>
+              <path class="country-path" data-country="Australia" data-risk="28" d="M780,340 L880,320 L920,400 L860,430 L780,400 Z" fill="#22c55e"/>
+            </svg>
+            <div id="mapTooltip" style="display:none;position:absolute;background:var(--tooltip-bg);border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:13px;pointer-events:none;z-index:10;box-shadow:0 8px 24px rgba(0,0,0,0.3);">
+              <p style="font-weight:600;" id="tooltipCountry"></p>
+              <p style="font-size:11px;color:var(--fg-subtle);">Risk: <span id="tooltipRisk" style="color:var(--accent);font-weight:700;"></span></p>
+            </div>
+          </div>
+        </div>
+        <!-- Top Countries -->
+        <div class="card" style="padding:24px;">
+          <div class="section-header"><div><div class="section-title">Top Risk Countries</div><div class="section-sub">Highest threat levels</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="background:var(--surface-el);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:22px">🇺🇸</div><div><p style="font-size:13px;font-weight:600;">United States</p><p style="font-size:11px;color:var(--fg-subtle)">Banking Crisis</p></div></div><span style="font-size:20px;font-weight:800;color:var(--accent);">72%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:72%;background:linear-gradient(to right,var(--warning),var(--accent))"></div></div>
+            </div>
+            <div style="background:var(--surface-el);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:22px">🇦🇷</div><div><p style="font-size:13px;font-weight:600;">Argentina</p><p style="font-size:11px;color:var(--fg-subtle)">Currency Crisis</p></div></div><span style="font-size:20px;font-weight:800;color:var(--accent);">68%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:68%;background:linear-gradient(to right,var(--warning),var(--accent))"></div></div>
+            </div>
+            <div style="background:var(--surface-el);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:22px">🇳🇬</div><div><p style="font-size:13px;font-weight:600;">Nigeria</p><p style="font-size:11px;color:var(--fg-subtle)">Liquidity Stress</p></div></div><span style="font-size:20px;font-weight:800;color:var(--accent);">65%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:65%;background:linear-gradient(to right,var(--warning),var(--accent))"></div></div>
+            </div>
+            <div style="background:var(--surface-el);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:22px">🇨🇳</div><div><p style="font-size:13px;font-weight:600;">China</p><p style="font-size:11px;color:var(--fg-subtle)">Property Market</p></div></div><span style="font-size:20px;font-weight:800;color:var(--warning);">61%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:61%;background:linear-gradient(to right,var(--success),var(--warning))"></div></div>
+            </div>
+            <div style="background:var(--surface-el);border:1px solid var(--border);border-radius:12px;padding:14px;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform=''">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><div style="display:flex;align-items:center;gap:10px;"><div style="font-size:22px">🇷🇺</div><div><p style="font-size:13px;font-weight:600;">Russia</p><p style="font-size:11px;color:var(--fg-subtle)">Sanctions Impact</p></div></div><span style="font-size:20px;font-weight:800;color:var(--warning);">58%</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:58%;background:linear-gradient(to right,var(--success),var(--warning))"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 3: VIX Chart + Market Indicators -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+        <div class="card" style="padding:24px;">
+          <div class="section-header">
+            <div><div class="section-title">Real-Time Volatility Index (VIX)</div><div class="section-sub">Market fear gauge</div></div>
+            <div style="display:flex;background:var(--surface-el);padding:4px;border-radius:10px;gap:2px;">
+              <button class="range-btn" data-range="1D" onclick="updateVix(this,'1D')">1D</button>
+              <button class="range-btn active" data-range="1W" onclick="updateVix(this,'1W')">1W</button>
+              <button class="range-btn" data-range="1M" onclick="updateVix(this,'1M')">1M</button>
+            </div>
+          </div>
+          <div style="position:relative;height:260px;"><canvas id="vixChart"></canvas></div>
+        </div>
+        <div class="card" style="padding:24px;">
+          <div class="section-header"><div><div class="section-title">Market Indicators</div><div class="section-sub">Key financial metrics</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div class="market-row">
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:8px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-chart-line" style="color:var(--accent);font-size:13px;"></i></div><div><p style="font-size:13px;font-weight:500;">S&P 500</p><p style="font-size:11px;color:var(--fg-subtle)">US Equity</p></div></div>
+              <div style="text-align:right;"><p style="font-size:13px;font-weight:600;">5,423.50</p><p style="font-size:11px;color:var(--accent)"><i class="fas fa-arrow-down" style="font-size:9px;margin-right:2px;"></i>-1.2%</p></div>
+            </div>
+            <div class="market-row">
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:8px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-rupee-sign" style="color:var(--success);font-size:13px;"></i></div><div><p style="font-size:13px;font-weight:500;">NIFTY 50</p><p style="font-size:11px;color:var(--fg-subtle)">India Equity</p></div></div>
+              <div style="text-align:right;"><p style="font-size:13px;font-weight:600;">22,865</p><p style="font-size:11px;color:var(--success)"><i class="fas fa-arrow-up" style="font-size:9px;margin-right:2px;"></i>+0.4%</p></div>
+            </div>
+            <div class="market-row">
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:8px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-coins" style="color:var(--warning);font-size:13px;"></i></div><div><p style="font-size:13px;font-weight:500;">Gold</p><p style="font-size:11px;color:var(--fg-subtle)">Commodity</p></div></div>
+              <div style="text-align:right;"><p style="font-size:13px;font-weight:600;">$2,412</p><p style="font-size:11px;color:var(--success)"><i class="fas fa-arrow-up" style="font-size:9px;margin-right:2px;"></i>+0.8%</p></div>
+            </div>
+            <div class="market-row">
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:8px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-oil-can" style="color:var(--accent);font-size:13px;"></i></div><div><p style="font-size:13px;font-weight:500;">Oil (WTI)</p><p style="font-size:11px;color:var(--fg-subtle)">Commodity</p></div></div>
+              <div style="text-align:right;"><p style="font-size:13px;font-weight:600;">$78.15</p><p style="font-size:11px;color:var(--accent)"><i class="fas fa-arrow-down" style="font-size:9px;margin-right:2px;"></i>-2.1%</p></div>
+            </div>
+            <div class="market-row">
+              <div style="display:flex;align-items:center;gap:10px;"><div style="width:36px;height:36px;border-radius:8px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-dollar-sign" style="color:var(--info);font-size:13px;"></i></div><div><p style="font-size:13px;font-weight:500;">USD/INR</p><p style="font-size:11px;color:var(--fg-subtle)">Forex</p></div></div>
+              <div style="text-align:right;"><p style="font-size:13px;font-weight:600;">83.42</p><p style="font-size:11px;color:var(--success)"><i class="fas fa-arrow-down" style="font-size:9px;margin-right:2px;"></i>-0.3%</p></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ROW 4: Alerts + Bank Risk -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+        <div class="card" style="padding:24px;">
+          <div class="section-header"><div><div class="section-title">Recent Alerts</div><div class="section-sub">Latest crisis warnings</div></div><button class="view-all-btn" onclick="showPage('alerts',document.querySelector('[data-page=alerts] a'))">View All →</button></div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div class="alert-card" style="background:var(--surface-el);border:1px solid rgba(239,68,68,0.2);border-radius:12px;padding:16px;">
+              <div style="display:flex;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-exclamation-circle" style="color:var(--accent)"></i></div>
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-subtle)">#ALT-203</span><span class="chip chip-red">CRITICAL</span></div>
+                  <p style="font-size:13px;font-weight:600;margin-bottom:4px;">USA Banking Crisis Risk — 72%</p>
+                  <p style="font-size:12px;color:var(--fg-subtle);">Bond yield spike +3.2%, bank stocks down 8%, VIX surged 18%.</p>
+                  <div style="display:flex;gap:16px;margin-top:10px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="far fa-clock" style="margin-right:4px"></i>2 min ago</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-shield-alt" style="margin-right:4px"></i>89% confidence</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="alert-card" style="background:var(--surface-el);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:16px;">
+              <div style="display:flex;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-exclamation-triangle" style="color:var(--warning)"></i></div>
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-subtle)">#ALT-202</span><span class="chip chip-yellow">WARNING</span></div>
+                  <p style="font-size:13px;font-weight:600;margin-bottom:4px;">China Property Stress — 61%</p>
+                  <p style="font-size:12px;color:var(--fg-subtle);">Evergrande-linked bonds declining, developer defaults rising.</p>
+                  <div style="display:flex;gap:16px;margin-top:10px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="far fa-clock" style="margin-right:4px"></i>15 min ago</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-shield-alt" style="margin-right:4px"></i>76% confidence</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="alert-card" style="background:var(--surface-el);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:16px;">
+              <div style="display:flex;gap:12px;">
+                <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-tint" style="color:var(--warning)"></i></div>
+                <div style="flex:1;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-subtle)">#ALT-201</span><span class="chip chip-yellow">WARNING</span></div>
+                  <p style="font-size:13px;font-weight:600;margin-bottom:4px;">Argentina Liquidity Crisis — 68%</p>
+                  <p style="font-size:12px;color:var(--fg-subtle);">Peso devaluation accelerating, central bank reserves falling.</p>
+                  <div style="display:flex;gap:16px;margin-top:10px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="far fa-clock" style="margin-right:4px"></i>42 min ago</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-shield-alt" style="margin-right:4px"></i>81% confidence</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Bank Risk -->
+        <div class="card" style="padding:24px;">
+          <div class="section-header"><div><div class="section-title">Bank Risk Exposure</div><div class="section-sub">Top financial institutions</div></div><button class="view-all-btn" onclick="showPage('banks',document.querySelector('[data-page=banks] a'))">Details →</button></div>
+          <table>
+            <thead><tr><th>Institution</th><th>Country</th><th>Risk</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td><span style="font-weight:600;">JPMorgan Chase</span></td><td><span style="color:var(--fg-subtle)">USA</span></td><td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:60px;"><div class="progress-fill" style="width:72%;background:var(--accent)"></div></div><span style="color:var(--accent);font-weight:600;font-size:12px;">72%</span></div></td><td><span class="chip chip-red">Critical</span></td></tr>
+              <tr><td><span style="font-weight:600;">Credit Suisse</span></td><td><span style="color:var(--fg-subtle)">CHE</span></td><td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:60px;"><div class="progress-fill" style="width:65%;background:var(--accent)"></div></div><span style="color:var(--accent);font-weight:600;font-size:12px;">65%</span></div></td><td><span class="chip chip-red">High</span></td></tr>
+              <tr><td><span style="font-weight:600;">Deutsche Bank</span></td><td><span style="color:var(--fg-subtle)">DEU</span></td><td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:60px;"><div class="progress-fill" style="width:58%;background:var(--warning)"></div></div><span style="color:var(--warning);font-weight:600;font-size:12px;">58%</span></div></td><td><span class="chip chip-yellow">Warning</span></td></tr>
+              <tr><td><span style="font-weight:600;">ICBC</span></td><td><span style="color:var(--fg-subtle)">CHN</span></td><td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:60px;"><div class="progress-fill" style="width:61%;background:var(--warning)"></div></div><span style="color:var(--warning);font-weight:600;font-size:12px;">61%</span></div></td><td><span class="chip chip-yellow">Warning</span></td></tr>
+              <tr><td><span style="font-weight:600;">HDFC Bank</span></td><td><span style="color:var(--fg-subtle)">IND</span></td><td><div style="display:flex;align-items:center;gap:8px;"><div class="progress-bar" style="width:60px;"><div class="progress-fill" style="width:28%;background:var(--success)"></div></div><span style="color:var(--success);font-weight:600;font-size:12px;">28%</span></div></td><td><span class="chip chip-green">Safe</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ROW 5: News -->
+      <div class="card" style="padding:24px;">
+        <div class="section-header">
+          <div><div class="section-title">News Sentiment Scanner</div><div class="section-sub">AI-analyzed financial headlines</div></div>
+          <div style="display:flex;align-items:center;gap:6px;padding:5px 12px;background:rgba(239,68,68,0.08);border-radius:999px;border:1px solid rgba(239,68,68,0.15);"><div class="dot" style="background:var(--accent)"></div><span style="font-size:11px;color:var(--accent);font-weight:500;">Scanning 5,000+ sources</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+          <div class="news-card"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:var(--fg-subtle)">Reuters • 5 min</span><span class="chip chip-red">Negative</span></div><p style="font-size:13px;font-weight:500;margin-bottom:8px;">"US regional banks face renewed deposit concerns"</p><span style="font-size:12px;color:var(--accent)">Banking Risk +2.3%</span></div>
+          <div class="news-card"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:var(--fg-subtle)">Bloomberg • 18 min</span><span class="chip chip-yellow">Cautious</span></div><p style="font-size:13px;font-weight:500;margin-bottom:8px;">"Fed signals rates to stay higher for longer"</p><span style="font-size:12px;color:var(--warning)">Market Risk +1.1%</span></div>
+          <div class="news-card"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="font-size:11px;color:var(--fg-subtle)">FT • 32 min</span><span class="chip chip-green">Positive</span></div><p style="font-size:13px;font-weight:500;margin-bottom:8px;">"India GDP growth beats estimates at 7.2%"</p><span style="font-size:12px;color:var(--success)">India Risk -0.8%</span></div>
+        </div>
+        <div style="margin-top:12px;padding:16px;background:var(--surface-el);border-radius:10px;border:1px solid var(--border);">
+          <p style="font-size:11px;color:var(--fg-subtle);margin-bottom:10px;">Today's Sentiment Distribution</p>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="flex:1;height:10px;border-radius:999px;overflow:hidden;display:flex;"><div style="width:42%;background:var(--accent)"></div><div style="width:28%;background:var(--warning)"></div><div style="width:30%;background:var(--success)"></div></div>
+            <div style="display:flex;gap:12px;font-size:12px;white-space:nowrap;"><span style="color:var(--accent)">42% Neg</span><span style="color:var(--warning)">28% Neu</span><span style="color:var(--success)">30% Pos</span></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== MARKETS PAGE ==================== -->
+  <div class="page-content fade-in" id="page-markets">
+    <div style="display:grid;gap:24px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        <div class="card stat-card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">S&P 500</div><div style="font-size:24px;font-weight:800;color:var(--fg)">5,423.50</div><div style="font-size:12px;color:var(--accent);margin-top:4px;"><i class="fas fa-arrow-down"></i> -1.2% (Today)</div></div>
+        <div class="card stat-card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">NASDAQ</div><div style="font-size:24px;font-weight:800;color:var(--fg)">17,842</div><div style="font-size:12px;color:var(--accent);margin-top:4px;"><i class="fas fa-arrow-down"></i> -0.8% (Today)</div></div>
+        <div class="card stat-card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">DOW JONES</div><div style="font-size:24px;font-weight:800;color:var(--fg)">38,921</div><div style="font-size:12px;color:var(--success);margin-top:4px;"><i class="fas fa-arrow-up"></i> +0.3% (Today)</div></div>
+        <div class="card stat-card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">VIX (Fear Index)</div><div style="font-size:24px;font-weight:800;color:var(--accent)">28.4</div><div style="font-size:12px;color:var(--accent);margin-top:4px;"><i class="fas fa-arrow-up"></i> +18.2% (Today)</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+        <div class="card" style="padding:24px;">
+          <div class="section-header"><div><div class="section-title">Market Performance Chart</div><div class="section-sub">30-day index comparison</div></div></div>
+          <div style="height:300px;"><canvas id="marketsChart"></canvas></div>
+        </div>
+        <div class="card" style="padding:24px;">
+          <div class="section-header"><div><div class="section-title">Sector Performance</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;">Technology</span><span style="font-size:13px;color:var(--accent);font-weight:600;">-2.1%</span></div><div class="progress-bar"><div class="progress-fill" style="width:80%;background:var(--accent)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;">Financials</span><span style="font-size:13px;color:var(--accent);font-weight:600;">-3.4%</span></div><div class="progress-bar"><div class="progress-fill" style="width:90%;background:var(--accent)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;">Energy</span><span style="font-size:13px;color:var(--warning);font-weight:600;">-0.8%</span></div><div class="progress-bar"><div class="progress-fill" style="width:50%;background:var(--warning)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;">Healthcare</span><span style="font-size:13px;color:var(--success);font-weight:600;">+1.2%</span></div><div class="progress-bar"><div class="progress-fill" style="width:55%;background:var(--success)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;">Utilities</span><span style="font-size:13px;color:var(--success);font-weight:600;">+0.6%</span></div><div class="progress-bar"><div class="progress-fill" style="width:40%;background:var(--success)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:13px;">Real Estate</span><span style="font-size:13px;color:var(--accent);font-weight:600;">-1.5%</span></div><div class="progress-bar"><div class="progress-fill" style="width:70%;background:var(--accent)"></div></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="padding:24px;">
+        <div class="section-header"><div><div class="section-title">Global Market Summary</div></div></div>
+        <table>
+          <thead><tr><th>Index</th><th>Region</th><th>Last Price</th><th>Change</th><th>% Change</th><th>Volume</th><th>Risk</th></tr></thead>
+          <tbody>
+            <tr><td style="font-weight:600;">S&P 500</td><td>USA</td><td>5,423.50</td><td style="color:var(--accent);">-65.80</td><td><span class="chip chip-red">-1.2%</span></td><td>3.2B</td><td><span class="chip chip-red">High</span></td></tr>
+            <tr><td style="font-weight:600;">NASDAQ</td><td>USA</td><td>17,842</td><td style="color:var(--accent);">-143.6</td><td><span class="chip chip-red">-0.8%</span></td><td>5.1B</td><td><span class="chip chip-red">High</span></td></tr>
+            <tr><td style="font-weight:600;">FTSE 100</td><td>UK</td><td>7,880</td><td style="color:var(--accent);">-42.1</td><td><span class="chip chip-yellow">-0.5%</span></td><td>1.8B</td><td><span class="chip chip-yellow">Medium</span></td></tr>
+            <tr><td style="font-weight:600;">DAX</td><td>Germany</td><td>17,640</td><td style="color:var(--success);">+120.3</td><td><span class="chip chip-green">+0.7%</span></td><td>2.1B</td><td><span class="chip chip-green">Low</span></td></tr>
+            <tr><td style="font-weight:600;">NIKKEI 225</td><td>Japan</td><td>38,210</td><td style="color:var(--success);">+280.5</td><td><span class="chip chip-green">+0.7%</span></td><td>4.2B</td><td><span class="chip chip-green">Low</span></td></tr>
+            <tr><td style="font-weight:600;">NIFTY 50</td><td>India</td><td>22,865</td><td style="color:var(--success);">+91.4</td><td><span class="chip chip-green">+0.4%</span></td><td>2.6B</td><td><span class="chip chip-yellow">Medium</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== BANKS PAGE ==================== -->
+  <div class="page-content fade-in" id="page-banks">
+    <div style="display:grid;gap:24px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Banks Monitored</div><div style="font-size:28px;font-weight:800;">142</div><div style="font-size:12px;color:var(--fg-subtle);margin-top:4px;">Across 38 countries</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Critical Risk</div><div style="font-size:28px;font-weight:800;color:var(--accent);">8</div><div style="font-size:12px;color:var(--accent);margin-top:4px;">Above 65% threshold</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Avg Capital Ratio</div><div style="font-size:28px;font-weight:800;color:var(--warning);">12.4%</div><div style="font-size:12px;color:var(--warning);margin-top:4px;">↓ Below Basel III target</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Stress Test Fail</div><div style="font-size:28px;font-weight:800;color:var(--accent);">3</div><div style="font-size:12px;color:var(--accent);margin-top:4px;">Last 90 days</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+        <div class="bank-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:42px;height:42px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;">🏦</div><div><p style="font-size:14px;font-weight:700;">JPMorgan Chase</p><p style="font-size:11px;color:var(--fg-subtle)">USA • Investment Bank</p></div></div><span class="chip chip-red">Critical</span></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Tier 1 Capital</span><span style="font-weight:600;">11.2%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Liquidity Ratio</span><span style="font-weight:600;color:var(--accent)">104%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Bad Loans</span><span style="font-weight:600;color:var(--warning)">3.8%</span></div></div><div style="margin-top:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;color:var(--fg-subtle)">Overall Risk</span><span style="font-size:13px;font-weight:700;color:var(--accent)">72%</span></div><div class="progress-bar"><div class="progress-fill" style="width:72%;background:var(--accent)"></div></div></div></div>
+        <div class="bank-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:42px;height:42px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;">🏦</div><div><p style="font-size:14px;font-weight:700;">Credit Suisse</p><p style="font-size:11px;color:var(--fg-subtle)">Switzerland • Universal</p></div></div><span class="chip chip-red">High Risk</span></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Tier 1 Capital</span><span style="font-weight:600;">9.8%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Liquidity Ratio</span><span style="font-weight:600;color:var(--accent)">98%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Bad Loans</span><span style="font-weight:600;color:var(--accent)">5.1%</span></div></div><div style="margin-top:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;color:var(--fg-subtle)">Overall Risk</span><span style="font-size:13px;font-weight:700;color:var(--accent)">65%</span></div><div class="progress-bar"><div class="progress-fill" style="width:65%;background:var(--accent)"></div></div></div></div>
+        <div class="bank-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:42px;height:42px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;">🏦</div><div><p style="font-size:14px;font-weight:700;">Deutsche Bank</p><p style="font-size:11px;color:var(--fg-subtle)">Germany • Investment</p></div></div><span class="chip chip-yellow">Warning</span></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Tier 1 Capital</span><span style="font-weight:600;">13.1%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Liquidity Ratio</span><span style="font-weight:600;color:var(--warning)">112%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Bad Loans</span><span style="font-weight:600;color:var(--warning)">2.9%</span></div></div><div style="margin-top:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;color:var(--fg-subtle)">Overall Risk</span><span style="font-size:13px;font-weight:700;color:var(--warning)">58%</span></div><div class="progress-bar"><div class="progress-fill" style="width:58%;background:var(--warning)"></div></div></div></div>
+        <div class="bank-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:42px;height:42px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;">🏦</div><div><p style="font-size:14px;font-weight:700;">ICBC</p><p style="font-size:11px;color:var(--fg-subtle)">China • State Bank</p></div></div><span class="chip chip-yellow">Warning</span></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Tier 1 Capital</span><span style="font-weight:600;">13.5%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Liquidity Ratio</span><span style="font-weight:600;">118%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Bad Loans</span><span style="font-weight:600;color:var(--warning)">4.2%</span></div></div><div style="margin-top:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;color:var(--fg-subtle)">Overall Risk</span><span style="font-size:13px;font-weight:700;color:var(--warning)">61%</span></div><div class="progress-bar"><div class="progress-fill" style="width:61%;background:var(--warning)"></div></div></div></div>
+        <div class="bank-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:42px;height:42px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;">🏦</div><div><p style="font-size:14px;font-weight:700;">HDFC Bank</p><p style="font-size:11px;color:var(--fg-subtle)">India • Private Bank</p></div></div><span class="chip chip-green">Safe</span></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Tier 1 Capital</span><span style="font-weight:600;">18.2%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Liquidity Ratio</span><span style="font-weight:600;color:var(--success)">145%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Bad Loans</span><span style="font-weight:600;color:var(--success)">1.2%</span></div></div><div style="margin-top:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;color:var(--fg-subtle)">Overall Risk</span><span style="font-size:13px;font-weight:700;color:var(--success)">28%</span></div><div class="progress-bar"><div class="progress-fill" style="width:28%;background:var(--success)"></div></div></div></div>
+        <div class="bank-card"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;"><div style="display:flex;align-items:center;gap:10px;"><div style="width:42px;height:42px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;font-size:18px;">🏦</div><div><p style="font-size:14px;font-weight:700;">Mitsubishi UFJ</p><p style="font-size:11px;color:var(--fg-subtle)">Japan • Mega Bank</p></div></div><span class="chip chip-green">Safe</span></div><div style="display:flex;flex-direction:column;gap:8px;"><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Tier 1 Capital</span><span style="font-weight:600;">17.8%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Liquidity Ratio</span><span style="font-weight:600;color:var(--success)">138%</span></div><div style="display:flex;justify-content:space-between;font-size:12px;"><span style="color:var(--fg-subtle)">Bad Loans</span><span style="font-weight:600;color:var(--success)">1.5%</span></div></div><div style="margin-top:14px;"><div style="display:flex;justify-content:space-between;margin-bottom:5px;"><span style="font-size:12px;color:var(--fg-subtle)">Overall Risk</span><span style="font-size:13px;font-weight:700;color:var(--success)">32%</span></div><div class="progress-bar"><div class="progress-fill" style="width:32%;background:var(--success)"></div></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== LIQUIDITY PAGE ==================== -->
+  <div class="page-content fade-in" id="page-liquidity">
+    <div style="display:grid;gap:24px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Global Liquidity Index</div><div style="font-size:28px;font-weight:800;color:var(--accent);">85%</div><div style="font-size:12px;color:var(--accent);margin-top:4px;">↑ Tight Conditions</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Interbank Spread</div><div style="font-size:28px;font-weight:800;color:var(--warning);">0.48%</div><div style="font-size:12px;color:var(--warning);margin-top:4px;">↑ +12bp vs yesterday</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Fed Balance Sheet</div><div style="font-size:28px;font-weight:800;">$7.4T</div><div style="font-size:12px;color:var(--success);margin-top:4px;">↓ -$120B (QT)</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Repo Market Volume</div><div style="font-size:28px;font-weight:800;">$2.1T</div><div style="font-size:12px;color:var(--accent);margin-top:4px;">↑ Elevated demand</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:24px;">
+        <div class="card" style="padding:24px;">
+          <div class="section-header"><div><div class="section-title">Liquidity Stress Index — Historical</div><div class="section-sub">90-day trend</div></div></div>
+          <div style="height:280px;"><canvas id="liquidityChart"></canvas></div>
+        </div>
+        <div class="card" style="padding:24px;">
+          <div class="section-header"><div><div class="section-title">Liquidity Indicators</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:14px;">
+            <div style="padding:14px;background:var(--surface-el);border-radius:10px;border:1px solid rgba(239,68,68,0.2);"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;font-weight:600;">Dollar Shortage Index</span><span style="color:var(--accent);font-weight:700;">HIGH</span></div><div class="progress-bar"><div class="progress-fill" style="width:82%;background:var(--accent)"></div></div><div style="font-size:11px;color:var(--fg-subtle);margin-top:5px;">82 / 100 — Critical</div></div>
+            <div style="padding:14px;background:var(--surface-el);border-radius:10px;border:1px solid rgba(245,158,11,0.2);"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;font-weight:600;">Credit Default Swaps</span><span style="color:var(--warning);font-weight:700;">ELEVATED</span></div><div class="progress-bar"><div class="progress-fill" style="width:64%;background:var(--warning)"></div></div><div style="font-size:11px;color:var(--fg-subtle);margin-top:5px;">64 / 100 — Warning</div></div>
+            <div style="padding:14px;background:var(--surface-el);border-radius:10px;border:1px solid var(--border);"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;font-weight:600;">EM Currency Pressure</span><span style="color:var(--warning);font-weight:700;">MODERATE</span></div><div class="progress-bar"><div class="progress-fill" style="width:55%;background:var(--warning)"></div></div><div style="font-size:11px;color:var(--fg-subtle);margin-top:5px;">55 / 100 — Monitor</div></div>
+            <div style="padding:14px;background:var(--surface-el);border-radius:10px;border:1px solid rgba(34,197,94,0.2);"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span style="font-size:13px;font-weight:600;">Gold Reserves Flow</span><span style="color:var(--success);font-weight:700;">STABLE</span></div><div class="progress-bar"><div class="progress-fill" style="width:32%;background:var(--success)"></div></div><div style="font-size:11px;color:var(--fg-subtle);margin-top:5px;">32 / 100 — Normal</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== ALERTS PAGE ==================== -->
+  <div class="page-content fade-in" id="page-alerts">
+    <div style="display:grid;gap:24px;">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        <div class="card" style="padding:20px;border-color:rgba(239,68,68,0.3);"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Critical Alerts</div><div style="font-size:28px;font-weight:800;color:var(--accent);">3</div></div>
+        <div class="card" style="padding:20px;border-color:rgba(245,158,11,0.3);"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Warnings</div><div style="font-size:28px;font-weight:800;color:var(--warning);">6</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Watchlist</div><div style="font-size:28px;font-weight:800;">12</div></div>
+        <div class="card" style="padding:20px;border-color:rgba(34,197,94,0.3);"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Resolved Today</div><div style="font-size:28px;font-weight:800;color:var(--success);">4</div></div>
+      </div>
+      <div class="card" style="padding:24px;">
+        <div class="section-header"><div><div class="section-title">All Active Alerts</div><div class="section-sub">Sorted by severity</div></div></div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="alert-card" style="background:var(--surface-el);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:16px;"><div style="display:flex;gap:12px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-fire" style="color:var(--accent)"></i></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-subtle)">#ALT-203</span><div style="display:flex;gap:8px;"><span class="chip chip-red">CRITICAL</span><span style="font-size:11px;color:var(--fg-subtle)">2 min ago</span></div></div><p style="font-size:14px;font-weight:700;margin-bottom:4px;">USA Banking Crisis Risk — 72%</p><p style="font-size:12px;color:var(--fg-subtle);">Bond yield spike +3.2%, bank stocks down 8%, VIX surged 18%. Pattern matches 2008 pre-crisis signature.</p><div style="display:flex;gap:16px;margin-top:10px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-shield-alt" style="margin-right:4px"></i>89% confidence</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>USA, EU</span></div></div></div></div>
+          <div class="alert-card" style="background:var(--surface-el);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:16px;"><div style="display:flex;gap:12px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-exclamation-circle" style="color:var(--accent)"></i></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-subtle)">#ALT-201</span><div style="display:flex;gap:8px;"><span class="chip chip-red">CRITICAL</span><span style="font-size:11px;color:var(--fg-subtle)">42 min ago</span></div></div><p style="font-size:14px;font-weight:700;margin-bottom:4px;">Argentina Currency Crisis — 68%</p><p style="font-size:12px;color:var(--fg-subtle);">Peso devaluation accelerating. Central bank reserves fell to critical levels. IMF intervention possible.</p><div style="display:flex;gap:16px;margin-top:10px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-shield-alt" style="margin-right:4px"></i>81% confidence</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>Argentina, LatAm</span></div></div></div></div>
+          <div class="alert-card" style="background:var(--surface-el);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:16px;"><div style="display:flex;gap:12px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-exclamation-triangle" style="color:var(--warning)"></i></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-subtle)">#ALT-202</span><div style="display:flex;gap:8px;"><span class="chip chip-yellow">WARNING</span><span style="font-size:11px;color:var(--fg-subtle)">15 min ago</span></div></div><p style="font-size:14px;font-weight:700;margin-bottom:4px;">China Property Stress — 61%</p><p style="font-size:12px;color:var(--fg-subtle);">Evergrande-linked bonds declining, developer defaults rising. Shadow banking exposure elevated.</p><div style="display:flex;gap:16px;margin-top:10px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-shield-alt" style="margin-right:4px"></i>76% confidence</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>China, Asia</span></div></div></div></div>
+          <div class="alert-card" style="background:var(--surface-el);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:16px;"><div style="display:flex;gap:12px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-tint" style="color:var(--warning)"></i></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-subtle)">#ALT-200</span><div style="display:flex;gap:8px;"><span class="chip chip-yellow">WARNING</span><span style="font-size:11px;color:var(--fg-subtle)">1 hr ago</span></div></div><p style="font-size:14px;font-weight:700;margin-bottom:4px;">Global Liquidity Tightening — 78%</p><p style="font-size:12px;color:var(--fg-subtle);">Dollar shortage indicators rising. Interbank spread elevated at 48bp. Repo market stress detected.</p><div style="display:flex;gap:16px;margin-top:10px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-shield-alt" style="margin-right:4px"></i>72% confidence</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>Global</span></div></div></div></div>
+          <div class="alert-card" style="background:var(--surface-el);border:1px solid rgba(245,158,11,0.2);border-radius:12px;padding:16px;"><div style="display:flex;gap:12px;"><div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="fas fa-oil-can" style="color:var(--warning)"></i></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--fg-subtle)">#ALT-199</span><div style="display:flex;gap:8px;"><span class="chip chip-yellow">WARNING</span><span style="font-size:11px;color:var(--fg-subtle)">2 hr ago</span></div></div><p style="font-size:14px;font-weight:700;margin-bottom:4px;">Oil Price Volatility — 55%</p><p style="font-size:12px;color:var(--fg-subtle);">WTI dropped 2.1% on demand concerns. OPEC+ supply cuts not fully offsetting weak consumption outlook.</p><div style="display:flex;gap:16px;margin-top:10px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-shield-alt" style="margin-right:4px"></i>65% confidence</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>Middle East, USA</span></div></div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== NEWS PAGE ==================== -->
+  <div class="page-content fade-in" id="page-news">
+    <div style="display:grid;gap:24px;">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Sources Monitored</div><div style="font-size:28px;font-weight:800;">5,248</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">News Today</div><div style="font-size:28px;font-weight:800;">1,842</div></div>
+        <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Overall Sentiment</div><div style="font-size:28px;font-weight:800;color:var(--accent);">Negative</div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+        <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">Reuters • 5 min ago</span><span class="chip chip-red">Negative</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"US regional banks face renewed deposit concerns amid rising yields"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">Analysts warn of potential deposit flight similar to SVB crisis as 10-year yield approaches 4.8%.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--accent);">Banking Risk +2.3%</span><span style="font-size:11px;color:var(--fg-subtle);">Banking, USA</span></div></div>
+        <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">Bloomberg • 18 min ago</span><span class="chip chip-yellow">Cautious</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"Fed signals rates to stay higher for longer, minutes reveal"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">FOMC minutes indicate policymakers are divided on timing of rate cuts, most cautious on early easing.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--warning);">Market Risk +1.1%</span><span style="font-size:11px;color:var(--fg-subtle);">Macro, Fed</span></div></div>
+        <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">FT • 32 min ago</span><span class="chip chip-green">Positive</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"India GDP growth beats estimates at 7.2% for Q3 2024"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">Strong domestic consumption and manufacturing output propelled India to exceed analyst forecasts.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--success);">India Risk -0.8%</span><span style="font-size:11px;color:var(--fg-subtle);">Asia, India</span></div></div>
+        <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">WSJ • 1 hr ago</span><span class="chip chip-red">Negative</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"China Evergrande creditors push for asset liquidation"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">International creditors seek court-ordered liquidation as restructuring talks collapse again.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--accent);">China Risk +3.1%</span><span style="font-size:11px;color:var(--fg-subtle);">Real Estate, China</span></div></div>
+        <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">CNBC • 2 hr ago</span><span class="chip chip-yellow">Cautious</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"Oil drops on weak demand outlook, OPEC+ production cut in doubt"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">WTI crude slid 2.1% as IEA trimmed 2025 demand forecasts citing slower economic growth in Europe.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--warning);">Commodity Risk +0.9%</span><span style="font-size:11px;color:var(--fg-subtle);">Energy, Global</span></div></div>
+        <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">Nikkei • 3 hr ago</span><span class="chip chip-green">Positive</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"Bank of Japan considers further rate hike amid Yen stabilization"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">BoJ officials signal potential for a second rate hike as inflation remains above the 2% target.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--success);">JPY Risk -1.2%</span><span style="font-size:11px;color:var(--fg-subtle);">Macro, Japan</span></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== HISTORY PAGE ==================== -->
+  <div class="page-content fade-in" id="page-history">
+    <div style="display:grid;gap:24px;">
+      <div class="card" style="padding:24px;">
+        <div class="section-header"><div><div class="section-title">Crisis Event History</div><div class="section-sub">AI-detected historical crisis patterns</div></div></div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
+          <div class="history-item"><div style="width:4px;border-radius:2px;background:var(--accent);flex-shrink:0;"></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:13px;font-weight:700;">SVB Banking Crisis</span><span class="chip chip-red">Critical</span></div><div style="display:flex;align-items:center;gap:16px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="far fa-calendar" style="margin-right:4px"></i>March 2023</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>USA</span><span style="font-size:11px;color:var(--accent)"><i class="fas fa-chart-line" style="margin-right:4px"></i>Risk Peak: 91%</span></div><p style="font-size:12px;color:var(--fg-subtle);margin-top:6px;">Silicon Valley Bank collapse triggered contagion fears. Fed emergency backstop stabilized the system.</p></div></div>
+          <div class="history-item"><div style="width:4px;border-radius:2px;background:var(--warning);flex-shrink:0;"></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:13px;font-weight:700;">UK Gilt Crisis</span><span class="chip chip-yellow">High</span></div><div style="display:flex;align-items:center;gap:16px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="far fa-calendar" style="margin-right:4px"></i>Sep–Oct 2022</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>UK</span><span style="font-size:11px;color:var(--warning)"><i class="fas fa-chart-line" style="margin-right:4px"></i>Risk Peak: 78%</span></div><p style="font-size:12px;color:var(--fg-subtle);margin-top:6px;">Mini-budget caused gilt yields to spike. BoE emergency bond-buying operation required.</p></div></div>
+          <div class="history-item"><div style="width:4px;border-radius:2px;background:var(--accent);flex-shrink:0;"></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:13px;font-weight:700;">COVID-19 Market Crash</span><span class="chip chip-red">Critical</span></div><div style="display:flex;align-items:center;gap:16px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="far fa-calendar" style="margin-right:4px"></i>Feb–March 2020</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>Global</span><span style="font-size:11px;color:var(--accent)"><i class="fas fa-chart-line" style="margin-right:4px"></i>Risk Peak: 96%</span></div><p style="font-size:12px;color:var(--fg-subtle);margin-top:6px;">S&P 500 fell 34% in 33 days. Coordinated global central bank action prevented deeper recession.</p></div></div>
+          <div class="history-item"><div style="width:4px;border-radius:2px;background:var(--accent);flex-shrink:0;"></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:13px;font-weight:700;">Global Financial Crisis</span><span class="chip chip-red">Critical</span></div><div style="display:flex;align-items:center;gap:16px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="far fa-calendar" style="margin-right:4px"></i>2007–2009</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>Global</span><span style="font-size:11px;color:var(--accent)"><i class="fas fa-chart-line" style="margin-right:4px"></i>Risk Peak: 98%</span></div><p style="font-size:12px;color:var(--fg-subtle);margin-top:6px;">Lehman Brothers collapse. Sub-prime mortgage crisis triggered worst recession since 1929. VIX hit 80.</p></div></div>
+          <div class="history-item"><div style="width:4px;border-radius:2px;background:var(--warning);flex-shrink:0;"></div><div style="flex:1;"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;"><span style="font-size:13px;font-weight:700;">Eurozone Debt Crisis</span><span class="chip chip-yellow">High</span></div><div style="display:flex;align-items:center;gap:16px;"><span style="font-size:11px;color:var(--fg-subtle)"><i class="far fa-calendar" style="margin-right:4px"></i>2010–2012</span><span style="font-size:11px;color:var(--fg-subtle)"><i class="fas fa-map-marker-alt" style="margin-right:4px"></i>Europe</span><span style="font-size:11px;color:var(--warning)"><i class="fas fa-chart-line" style="margin-right:4px"></i>Risk Peak: 84%</span></div><p style="font-size:12px;color:var(--fg-subtle);margin-top:6px;">Greece, Ireland, Portugal required IMF/EU bailouts. ECB's "whatever it takes" pledge ended acute phase.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS PAGE ==================== -->
+  <div class="page-content fade-in" id="page-settings">
+    <div style="display:grid;gap:24px;max-width:720px;">
+      <div class="card" style="padding:24px;">
+        <div class="section-title" style="margin-bottom:16px;">Appearance</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="setting-row"><div><p style="font-size:14px;font-weight:500;">Dark Mode</p><p style="font-size:12px;color:var(--fg-subtle);margin-top:2px;">Toggle between light and dark theme</p></div><label class="toggle-switch"><input type="checkbox" id="darkModeToggle" checked onchange="toggleTheme()"><span class="toggle-slider"></span></label></div>
+          <div class="setting-row"><div><p style="font-size:14px;font-weight:500;">Compact View</p><p style="font-size:12px;color:var(--fg-subtle);margin-top:2px;">Reduce spacing for more data density</p></div><label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+          <div class="setting-row"><div><p style="font-size:14px;font-weight:500;">Animate Numbers</p><p style="font-size:12px;color:var(--fg-subtle);margin-top:2px;">Counter animations on data refresh</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="card" style="padding:24px;">
+        <div class="section-title" style="margin-bottom:16px;">Notifications</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="setting-row"><div><p style="font-size:14px;font-weight:500;">Critical Alerts</p><p style="font-size:12px;color:var(--fg-subtle);margin-top:2px;">Notify when risk exceeds 70%</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          <div class="setting-row"><div><p style="font-size:14px;font-weight:500;">Warning Alerts</p><p style="font-size:12px;color:var(--fg-subtle);margin-top:2px;">Notify when risk exceeds 50%</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          <div class="setting-row"><div><p style="font-size:14px;font-weight:500;">News Digest</p><p style="font-size:12px;color:var(--fg-subtle);margin-top:2px;">Daily news summary email</p></div><label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+      <div class="card" style="padding:24px;">
+        <div class="section-title" style="margin-bottom:16px;">Data & Refresh</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="setting-row"><div><p style="font-size:14px;font-weight:500;">Auto-Refresh</p><p style="font-size:12px;color:var(--fg-subtle);margin-top:2px;">Refresh data every 60 seconds</p></div><label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label></div>
+          <div class="setting-row"><div><p style="font-size:14px;font-weight:500;">Data Refresh Interval</p></div><select style="background:var(--surface-el);border:1px solid var(--border);border-radius:8px;padding:6px 12px;color:var(--fg);font-size:13px;"><option>30 seconds</option><option selected>60 seconds</option><option>5 minutes</option><option>Manual</option></select></div>
+        </div>
+      </div>
+      <div class="card" style="padding:24px;">
+        <div class="section-title" style="margin-bottom:16px;">Account</div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;"><div class="avatar-circle" style="width:56px;height:56px;border-radius:14px;font-size:20px;" data-user-avatar>?</div><div><p style="font-size:16px;font-weight:700;" data-user-name>User</p><p style="font-size:13px;color:var(--fg-subtle);" data-user-email>user@crisisx.ai</p><span class="chip chip-blue" style="margin-top:4px;">Analyst</span></div></div>
+        <div style="display:flex;gap:10px;"><button style="padding:10px 20px;background:var(--surface-el);border:1px solid var(--border);border-radius:10px;color:var(--fg);font-size:13px;font-weight:500;cursor:pointer;" onmouseover="this.style.borderColor='var(--border-str)'" onmouseout="this.style.borderColor='var(--border)'">Edit Profile</button><button style="padding:10px 20px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:10px;color:var(--accent);font-size:13px;font-weight:500;cursor:pointer;">Sign Out</button></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- end main-content -->
+
+<!-- ==================== AI CHATBOT ==================== -->
+<div style="position:fixed;bottom:24px;right:24px;z-index:100;display:flex;flex-direction:column;align-items:flex-end;">
+  <div id="chatWindow" style="display:none;" class="chat-window" style="position:absolute;bottom:80px;right:0;width:380px;height:540px;background:var(--surface);border:1px solid var(--border);border-radius:20px;display:flex;flex-direction:column;overflow:hidden;position:absolute;bottom:80px;right:0;">
+    <div style="background:var(--surface-el);border-bottom:1px solid var(--border);padding:16px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#fff;">AI</div>
+        <div><p style="font-size:14px;font-weight:600;">Crisis Assistant</p><p style="font-size:11px;color:var(--fg-subtle);display:flex;align-items:center;gap:5px;margin-top:2px;"><span style="width:6px;height:6px;background:var(--success);border-radius:50%;display:inline-block;"></span>Online</p></div>
+      </div>
+      <button onclick="toggleChat()" style="background:none;border:none;color:var(--fg-subtle);cursor:pointer;font-size:16px;padding:4px;" onmouseover="this.style.color='var(--fg)'" onmouseout="this.style.color='var(--fg-subtle)'"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="chatMessages" style="flex:1;padding:16px;overflow-y:auto;background:var(--bg);display:flex;flex-direction:column;gap:10px;">
+      <div class="msg-appear" style="display:flex;gap:8px;align-items:flex-start;">
+        <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;">AI</div>
+        <div style="background:var(--surface-el);border:1px solid var(--border);padding:12px;border-radius:12px;border-top-left-radius:2px;max-width:80%;"><p style="font-size:13px;line-height:1.6;">Hello! I'm your crisis analyst. The US market shows high volatility today — VIX at <strong style="color:var(--accent)">28.4</strong>. How can I help?</p></div>
+      </div>
+    </div>
+    <div style="padding:12px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;">
+      <form id="chatForm" style="display:flex;gap:8px;align-items:center;" onsubmit="sendChat(event)">
+        <input type="text" id="chatInput" placeholder="Ask about risks..." style="flex:1;background:var(--surface-el);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--fg);outline:none;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'" placeholder="Ask about risks...">
+        <button type="submit" style="background:var(--accent);color:#fff;border:none;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='var(--accent-muted)'" onmouseout="this.style.background='var(--accent)'"><i class="fas fa-paper-plane" style="font-size:13px;"></i></button>
+      </form>
+    </div>
+  </div>
+  <button onclick="toggleChat()" class="chatbot-toggle" style="background:var(--accent);color:#fff;border:none;border-radius:50%;width:52px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;box-shadow:0 8px 24px -4px rgba(239,68,68,0.4);">
+    <i class="fas fa-comment-alt" style="font-size:18px;" id="chatIcon"></i>
+    <span style="position:absolute;top:-3px;right:-3px;display:flex;width:12px;height:12px;">
+      <span class="ping-dot" style="position:absolute;width:100%;height:100%;border-radius:50%;background:var(--warning);opacity:0.75;"></span>
+      <span style="position:relative;width:12px;height:12px;background:var(--warning);border-radius:50%;"></span>
+    </span>
+  </button>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <i class="fas fa-exclamation-circle" style="color:var(--accent);"></i>
+  <span id="toastMsg">Alert</span>
+  <button onclick="document.getElementById('toast').classList.remove('show')" style="background:none;border:none;color:var(--fg-subtle);cursor:pointer;margin-left:8px;font-size:14px;">×</button>
+</div>
+
+<script src="api.js"></script>
+<script>
+// ===== AUTH GUARD — runs before page shows =====
+(async () => {
+  const user = await requireAuth();
+  if (!user) return;
+  populateUserNav(user);
+
+  // Load data from real API
+  try {
+    const [risk, countries, markets, alerts, banks, news, stats] = await Promise.all([
+      CrisisAPI.globalRisk(),
+      CrisisAPI.topCountries(5),
+      CrisisAPI.marketIndicators(),
+      CrisisAPI.alerts(),
+      CrisisAPI.banks(),
+      CrisisAPI.news(),
+      CrisisAPI.stats(),
+    ]);
+
+    // Update global risk score
+    const scoreEl = document.getElementById('globalRiskScore');
+    if (scoreEl) {
+      let s = 0; const target = risk.score;
+      const iv = setInterval(() => { if (s >= target) { clearInterval(iv); } else { s++; scoreEl.textContent = s; } }, 20);
+    }
+
+    // Update stats
+    if (stats) {
+      const els = { countriesMonitored: stats.countriesMonitored, activeAlerts: stats.activeAlerts, modelAccuracy: stats.modelAccuracy + '%', dataFeeds: stats.dataFeeds };
+      Object.entries(els).forEach(([id, val]) => { const el = document.getElementById(id); if(el) el.textContent = val; });
+    }
+
+    // Update market tickers
+    if (markets) {
+      markets.forEach(m => {
+        const el = document.getElementById('ticker-' + m.symbol);
+        if (el) {
+          const changeEl = el.querySelector('.change');
+          if (changeEl) {
+            changeEl.textContent = (m.change > 0 ? '+' : '') + m.change + '%';
+            changeEl.className = 'change ' + (m.change > 0 ? 'text-success' : 'text-accent');
+          }
+        }
+      });
+    }
+  } catch(e) {
+    console.warn('API data load error:', e.message);
+  }
+})();
+
+// ===== MOBILE SIDEBAR OVERLAY =====
+function openMobileSidebar() {
+  const sb = document.getElementById('sidebar');
+  const overlay = document.getElementById('mobileOverlay');
+  if (sb) sb.classList.add('mobile-open');
+  if (overlay) overlay.classList.remove('hidden');
+}
+function closeMobileSidebar() {
+  const sb = document.getElementById('sidebar');
+  const overlay = document.getElementById('mobileOverlay');
+  if (sb) sb.classList.remove('mobile-open');
+  if (overlay) overlay.classList.add('hidden');
+}
+
+// ===== SIDEBAR =====
+let sidebarOpen = false;
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const mc = document.getElementById('mainContent');
+  const ic = document.getElementById('toggleIcon');
+  sidebarOpen = !sidebarOpen;
+  if (sidebarOpen) {
+    sb.classList.add('expanded'); mc.style.marginLeft = '220px';
+    ic.className = 'fas fa-chevron-left';
+    document.getElementById('sidebarToggle').style.left = '208px';
+  } else {
+    sb.classList.remove('expanded'); mc.style.marginLeft = '72px';
+    ic.className = 'fas fa-chevron-right';
+    document.getElementById('sidebarToggle').style.left = '60px';
+  }
+}
+
+// ===== PAGES =====
+const pageTitles = { dashboard:'Risk Dashboard', markets:'Markets Overview', banks:'Banking Risk Monitor', liquidity:'Liquidity Analysis', alerts:'Active Alerts', news:'News Sentiment', history:'Crisis History', settings:'Settings' };
+function showPage(pageId, linkEl) {
+  document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(li => li.classList.remove('active'));
+  const page = document.getElementById('page-' + pageId);
+  if (page) page.classList.add('active');
+  if (linkEl) linkEl.closest('.nav-item').classList.add('active');
+  document.getElementById('pageTitle').textContent = pageTitles[pageId] || pageId;
+  if (pageId === 'markets') initMarketsChart();
+  if (pageId === 'liquidity') initLiquidityChart();
+  closeMobileSidebar();
+  return false;
+}
+
+// ===== THEME =====
+let isDark = true;
+function toggleTheme() {
+  isDark = !isDark;
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  document.getElementById('themeIcon').className = isDark ? 'fas fa-moon' : 'fas fa-sun';
+  const toggle = document.getElementById('darkModeToggle');
+  if (toggle) toggle.checked = isDark;
+  if (vixChartInstance) { updateChartTheme(vixChartInstance); vixChartInstance.update(); }
+}
+
+function updateChartTheme(chart) {
+  const gc = isDark ? 'rgba(31,31,35,0.5)' : 'rgba(180,180,190,0.3)';
+  const tc = isDark ? '#71717a' : '#9ca3af';
+  if (chart.options.scales?.y) { chart.options.scales.y.grid.color = gc; chart.options.scales.y.ticks.color = tc; }
+  if (chart.options.scales?.x) { chart.options.scales.x.ticks.color = tc; }
+}
+
+// ===== VIX CHART =====
+let vixChartInstance = null;
+const vixDatasets = {
+  '1D': { labels:['10AM','11AM','12PM','1PM','2PM','3PM','4PM','Now'], data:[18.2,19.5,20.1,22.4,23.8,22.1,25.6,28.4] },
+  '1W': { labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun','Now'], data:[16.5,17.2,16.8,21.4,24.2,22.8,25.6,28.4] },
+  '1M': { labels:['Wk 1','Wk 2','Wk 3','Wk 4','Now'], data:[14.2,17.8,22.1,25.5,28.4] }
+};
+
+function initVixChart(range = '1D') {
+  const ctx = document.getElementById('vixChart');
+  if (!ctx) return;
+  const d = vixDatasets[range];
+  if (vixChartInstance) vixChartInstance.destroy();
+  vixChartInstance = new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label: 'VIX Index', data: d.data,
+        borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)',
+        borderWidth: 2, fill: true, tension: 0.4,
+        pointBackgroundColor: '#ef4444', pointRadius: 3, pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { backgroundColor: '#16161a', titleColor: '#a1a1aa', bodyColor: '#fafafa', borderColor: '#27272a', borderWidth: 1, padding: 10 } },
+      scales: {
+        y: { grid: { color: 'rgba(31,31,35,0.5)' }, ticks: { color: '#71717a', font: { size: 11 } }, border: { display: false } },
+        x: { grid: { display: false }, ticks: { color: '#71717a', font: { size: 11 } }, border: { display: false } }
+      }
+    }
+  });
+}
+
+function switchVixRange(range, btn) {
+  document.querySelectorAll('.vix-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // Try real API first
+  CrisisAPI.vixHistory(range).then(data => {
+    if (vixChartInstance) { vixChartInstance.data.labels = data.labels; vixChartInstance.data.datasets[0].data = data.data; vixChartInstance.update(); }
+  }).catch(() => initVixChart(range));
+}
+
+// ===== MARKETS & LIQUIDITY CHARTS =====
+function initMarketsChart() {
+  const ctx = document.getElementById('marketsChart');
+  if (!ctx || ctx._chartInitialized) return;
+  ctx._chartInitialized = true;
+  new Chart(ctx.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ['SPX','NIFTY','GOLD','WTI','USDINR','VIX','US10Y'],
+      datasets: [{ label: 'Change %', data: [-1.2,0.4,0.8,-2.1,-0.3,18.0,0.3],
+        backgroundColor: d => d.raw >= 0 ? 'rgba(34,197,94,0.7)' : 'rgba(239,68,68,0.7)',
+        borderRadius: 4 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{backgroundColor:'#16161a',bodyColor:'#fafafa',borderColor:'#27272a',borderWidth:1} },
+      scales:{ y:{grid:{color:'rgba(31,31,35,0.5)'},ticks:{color:'#71717a'}}, x:{grid:{display:false},ticks:{color:'#71717a'}} } }
+  });
+}
+
+function initLiquidityChart() {
+  const ctx = document.getElementById('liquidityChart');
+  if (!ctx || ctx._chartInitialized) return;
+  ctx._chartInitialized = true;
+  new Chart(ctx.getContext('2d'), {
+    type: 'doughnut',
+    data: { labels:['Banking','Market','Liquidity','Sentiment'], datasets:[{ data:[78,62,85,54], backgroundColor:['rgba(239,68,68,0.8)','rgba(245,158,11,0.8)','rgba(239,68,68,0.6)','rgba(59,130,246,0.8)'], borderWidth:0, hoverOffset:4 }] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'70%',
+      plugins:{ legend:{ position:'right', labels:{ color:'#a1a1aa', font:{size:12}, padding:15 } },
+      tooltip:{backgroundColor:'#16161a',bodyColor:'#fafafa',borderColor:'#27272a',borderWidth:1} } }
+  });
+}
+
+// ===== CHAT =====
+let chatLoading = false;
+async function sendChatMessage() {
+  if (chatLoading) return;
+  const input = document.getElementById('chatInput');
+  const box   = document.getElementById('chatBox');
+  const msg   = (input?.value || '').trim();
+  if (!msg || !box) return;
+  input.value = '';
+
+  // User bubble
+  box.innerHTML += `<div class="flex justify-end mb-4"><div class="bg-accent/20 border border-accent/30 rounded-xl rounded-tr-sm px-4 py-3 max-w-xs text-sm">${escapeHtml(msg)}</div></div>`;
+  box.scrollTop = box.scrollHeight;
+
+  // Loading bubble
+  const loadId = 'chat-load-' + Date.now();
+  box.innerHTML += `<div id="${loadId}" class="flex gap-3 mb-4"><div class="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0"><i class="fas fa-bolt text-accent text-xs"></i></div><div class="bg-surface-elevated border border-border rounded-xl rounded-tl-sm px-4 py-3 text-sm text-fg-muted"><span class="animate-pulse">Analyzing...</span></div></div>`;
+  box.scrollTop = box.scrollHeight;
+  chatLoading = true;
+
+  try {
+    const res = await CrisisAPI.chat(msg);
+    const loadEl = document.getElementById(loadId);
+    if (loadEl) loadEl.outerHTML = `<div class="flex gap-3 mb-4"><div class="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0"><i class="fas fa-bolt text-accent text-xs"></i></div><div class="bg-surface-elevated border border-border rounded-xl rounded-tl-sm px-4 py-3 text-sm leading-relaxed">${res.reply}</div></div>`;
+  } catch {
+    const loadEl = document.getElementById(loadId);
+    if (loadEl) loadEl.outerHTML = `<div class="flex gap-3 mb-4"><div class="w-7 h-7 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0"><i class="fas fa-bolt text-accent text-xs"></i></div><div class="bg-surface-elevated border border-border rounded-xl rounded-tl-sm px-4 py-3 text-sm text-accent">Could not connect to AI. Check backend is running.</div></div>`;
+  }
+  chatLoading = false;
+  box.scrollTop = box.scrollHeight;
+}
+
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+document.addEventListener('DOMContentLoaded', () => {
+  initVixChart('1D');
+
+  // Chat enter key
+  const chatInput = document.getElementById('chatInput');
+  if (chatInput) chatInput.addEventListener('keypress', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } });
+
+  // Handle mobile sidebar on resize
+  window.addEventListener('resize', () => { if (window.innerWidth >= 1024) closeMobileSidebar(); });
+});
+
+// Override window.logout
+window.logout = function() {
+  if (confirm('Are you sure you want to logout?')) logout();
+};
+</script>
+
+<!-- Mobile sidebar overlay -->
+<div id="mobileOverlay" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden" onclick="closeMobileSidebar()"></div>
+
+<style>
+/* Mobile sidebar */
+@media (max-width: 1023px) {
+  #sidebar { transform: translateX(-100%); transition: transform 0.3s ease; position: fixed !important; z-index: 40; height: 100vh; }
+  #sidebar.mobile-open { transform: translateX(0); }
+  #mainContent { margin-left: 0 !important; }
+  #sidebarToggle { display: none; }
+  /* Mobile hamburger */
+  #mobileMenuBtn { display: flex !important; }
+}
+@media (min-width: 1024px) {
+  #mobileMenuBtn { display: none !important; }
+}
+/* Responsive tables */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+</style>
+</body>
+</html>

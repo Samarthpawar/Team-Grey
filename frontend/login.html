@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login | CRISIS-X AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+      colors: {
+        bg: { DEFAULT: '#09090b' },
+        surface: { DEFAULT: '#111114', elevated: '#16161a' },
+        border: { DEFAULT: '#1f1f23', strong: '#27272a' },
+        fg: { DEFAULT: '#fafafa', muted: '#a1a1aa', subtle: '#71717a' },
+        accent: { DEFAULT: '#ef4444', muted: '#dc2626' },
+        success: { DEFAULT: '#22c55e' },
+        warning: { DEFAULT: '#f59e0b' },
+        info: { DEFAULT: '#3b82f6' },
+      }
+    }
+  }
+}
+</script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #09090b; color: #fafafa; min-height: 100vh; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: #09090b; }
+  ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+
+  .glass-card {
+    background: rgba(17,17,20,0.8);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(31,31,35,0.9);
+  }
+
+  .grid-pattern {
+    background-image:
+      linear-gradient(rgba(31,31,35,0.4) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(31,31,35,0.4) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Input */
+  .input-field {
+    width: 100%;
+    background: #16161a;
+    border: 1px solid #1f1f23;
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #fafafa;
+    font-family: 'Inter', sans-serif;
+    transition: all 0.2s;
+    outline: none;
+  }
+  .input-field:focus {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 3px rgba(239,68,68,0.1);
+    background: #1c1c21;
+  }
+  .input-field::placeholder { color: #71717a; }
+  .input-field.error { border-color: #ef4444; box-shadow: 0 0 0 3px rgba(239,68,68,0.15); }
+  .input-field.success { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.1); }
+
+  /* Tabs */
+  .tab-btn {
+    flex: 1;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.2s;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: #71717a;
+  }
+  .tab-btn.active {
+    background: #ef4444;
+    color: white;
+    box-shadow: 0 4px 15px -3px rgba(239,68,68,0.4);
+  }
+
+  /* Social buttons */
+  .social-btn {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 11px;
+    border: 1px solid #1f1f23;
+    border-radius: 10px;
+    background: #16161a;
+    color: #a1a1aa;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .social-btn:hover { background: #1c1c21; border-color: #27272a; color: #fafafa; }
+
+  /* Submit button */
+  .submit-btn {
+    width: 100%;
+    padding: 13px;
+    background: #ef4444;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .submit-btn:hover { background: #dc2626; box-shadow: 0 8px 25px -5px rgba(239,68,68,0.5); transform: translateY(-1px); }
+  .submit-btn:active { transform: translateY(0); }
+  .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  /* Strength bar */
+  .strength-bar { height: 3px; border-radius: 999px; transition: all 0.3s; }
+
+  /* Orb */
+  @keyframes float {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-20px) scale(1.05); }
+  }
+  .orb { animation: float 6s ease-in-out infinite; }
+  .orb-2 { animation: float 8s ease-in-out infinite reverse; }
+
+  /* Fade in */
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+
+  /* Error message */
+  .error-msg { font-size: 12px; color: #ef4444; margin-top: 4px; display: none; }
+  .error-msg.show { display: block; }
+
+  /* Shake */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-6px); }
+    40%, 80% { transform: translateX(6px); }
+  }
+  .shake { animation: shake 0.4s ease; }
+
+  /* Loading spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { animation: spin 0.8s linear infinite; }
+
+  /* Checkmark */
+  .checkmark { display: inline-block; transition: all 0.2s; }
+  input[type="checkbox"]:checked + label .checkmark { background: #ef4444; border-color: #ef4444; }
+
+  /* Stats ticker */
+  @keyframes tickerScroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .ticker-content { animation: tickerScroll 30s linear infinite; display: inline-flex; }
+</style>
+</head>
+<body class="grid-pattern min-h-screen flex">
+
+  <!-- Left Panel: Branding -->
+  <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden flex-col justify-between p-12">
+    <!-- Orbs -->
+    <div class="orb absolute w-96 h-96 bg-accent/10 rounded-full blur-3xl -top-20 -left-20 pointer-events-none"></div>
+    <div class="orb-2 absolute w-80 h-80 bg-warning/8 rounded-full blur-3xl bottom-20 right-10 pointer-events-none"></div>
+    <div class="orb absolute w-64 h-64 bg-info/6 rounded-full blur-3xl top-1/2 left-1/3 pointer-events-none"></div>
+
+    <!-- Logo -->
+    <div class="relative z-10">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-accent/15 flex items-center justify-center border border-accent/20">
+          <i class="fas fa-bolt text-accent"></i>
+        </div>
+        <span class="text-xl font-bold">CRISIS-X<span class="text-accent"> AI</span></span>
+      </div>
+    </div>
+
+    <!-- Center Content -->
+    <div class="relative z-10">
+      <span class="text-xs font-mono text-accent uppercase tracking-widest mb-4 block">Real-Time Financial Intelligence</span>
+      <h1 class="text-4xl xl:text-5xl font-bold leading-tight mb-5">
+        Predict Crisis<br>
+        <span class="text-transparent bg-clip-text bg-gradient-to-r from-accent via-warning to-accent">Before It Happens</span>
+      </h1>
+      <p class="text-fg-muted text-base leading-relaxed mb-10 max-w-sm">
+        Monitor 20 countries, 152 data feeds, and detect financial instability days before it reaches the headlines.
+      </p>
+
+      <!-- Mini stats -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="bg-surface-elevated/60 border border-border rounded-xl p-4 backdrop-blur">
+          <p class="text-2xl font-bold text-accent">20</p>
+          <p class="text-xs text-fg-subtle mt-1">Countries</p>
+        </div>
+        <div class="bg-surface-elevated/60 border border-border rounded-xl p-4 backdrop-blur">
+          <p class="text-2xl font-bold text-warning">89%</p>
+          <p class="text-xs text-fg-subtle mt-1">Accuracy</p>
+        </div>
+        <div class="bg-surface-elevated/60 border border-border rounded-xl p-4 backdrop-blur">
+          <p class="text-2xl font-bold text-success">14d</p>
+          <p class="text-xs text-fg-subtle mt-1">Early Warning</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom ticker -->
+    <div class="relative z-10 overflow-hidden">
+      <div class="flex gap-6 ticker-content text-xs font-mono text-fg-subtle whitespace-nowrap">
+        <span>S&P 500 <span class="text-accent">▼ -1.2%</span></span>
+        <span>VIX <span class="text-accent">▲ +18%</span></span>
+        <span>US 10Y <span class="text-accent">▲ 4.62%</span></span>
+        <span>GOLD <span class="text-success">▲ +0.8%</span></span>
+        <span>USD/INR <span class="text-warning">83.42</span></span>
+        <span>NIFTY <span class="text-success">▲ +0.4%</span></span>
+        <span>OIL <span class="text-accent">▼ -2.1%</span></span>
+        <span>S&P 500 <span class="text-accent">▼ -1.2%</span></span>
+        <span>VIX <span class="text-accent">▲ +18%</span></span>
+        <span>US 10Y <span class="text-accent">▲ 4.62%</span></span>
+        <span>GOLD <span class="text-success">▲ +0.8%</span></span>
+        <span>USD/INR <span class="text-warning">83.42</span></span>
+        <span>NIFTY <span class="text-success">▲ +0.4%</span></span>
+        <span>OIL <span class="text-accent">▼ -2.1%</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Auth Form -->
+  <div class="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
+    <div class="w-full max-w-md fade-in-up">
+
+      <!-- Mobile Logo -->
+      <div class="lg:hidden flex items-center gap-3 mb-8">
+        <div class="w-9 h-9 rounded-xl bg-accent/15 flex items-center justify-center">
+          <i class="fas fa-bolt text-accent text-sm"></i>
+        </div>
+        <span class="font-bold text-lg">CRISIS-X<span class="text-accent"> AI</span></span>
+      </div>
+
+      <!-- Card -->
+      <div class="glass-card rounded-2xl p-8">
+
+        <!-- Tabs -->
+        <div class="flex gap-2 p-1 bg-surface-elevated rounded-xl mb-8">
+          <button class="tab-btn active" id="loginTab" onclick="switchTab('login')">Sign In</button>
+          <button class="tab-btn" id="signupTab" onclick="switchTab('signup')">Create Account</button>
+        </div>
+
+        <!-- LOGIN FORM -->
+        <form id="loginForm" onsubmit="handleLogin(event)">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-1">Welcome back</h2>
+            <p class="text-sm text-fg-subtle">Sign in to your CRISIS-X AI account</p>
+          </div>
+
+          <!-- Social Login -->
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <button type="button" class="social-btn" onclick="demoLogin()">
+              <i class="fab fa-google text-sm"></i> Google
+            </button>
+            <button type="button" class="social-btn" onclick="demoLogin()">
+              <i class="fab fa-github text-sm"></i> GitHub
+            </button>
+          </div>
+
+          <div class="flex items-center gap-3 mb-6">
+            <div class="flex-1 h-px bg-border"></div>
+            <span class="text-xs text-fg-subtle">or continue with email</span>
+            <div class="flex-1 h-px bg-border"></div>
+          </div>
+
+          <!-- Email -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Email</label>
+            <div class="relative">
+              <input type="email" id="loginEmail" class="input-field" placeholder="analyst@crisisx.ai">
+              <i class="fas fa-envelope absolute right-4 top-1/2 -translate-y-1/2 text-fg-subtle text-sm"></i>
+            </div>
+            <p class="error-msg" id="loginEmailError">Please enter a valid email</p>
+          </div>
+
+          <!-- Password -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-sm font-medium">Password</label>
+              <button type="button" class="text-xs text-accent hover:underline" onclick="showForgotPassword()">Forgot password?</button>
+            </div>
+            <div class="relative">
+              <input type="password" id="loginPassword" class="input-field" placeholder="Enter your password">
+              <button type="button" onclick="togglePassword('loginPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg transition-colors">
+                <i class="fas fa-eye text-sm"></i>
+              </button>
+            </div>
+            <p class="error-msg" id="loginPasswordError">Password is required</p>
+          </div>
+
+          <!-- Remember me -->
+          <div class="flex items-center gap-3 mb-6">
+            <div class="relative">
+              <input type="checkbox" id="rememberMe" class="w-4 h-4 rounded" style="accent-color: #ef4444;">
+              <label for="rememberMe"></label>
+            </div>
+            <label for="rememberMe" class="text-sm text-fg-muted cursor-pointer">Remember me for 30 days</label>
+          </div>
+
+          <!-- Submit -->
+          <button type="submit" class="submit-btn" id="loginBtn">
+            <span id="loginBtnText">Sign In</span>
+          </button>
+
+          <!-- Demo login -->
+          <button type="button" onclick="demoLogin()" class="w-full mt-3 py-3 text-sm text-fg-subtle hover:text-fg border border-border rounded-xl hover:border-border-strong transition-colors">
+            <i class="fas fa-eye mr-2"></i>Continue as Demo Guest
+          </button>
+        </form>
+
+        <!-- SIGNUP FORM -->
+        <form id="signupForm" class="hidden" onsubmit="handleSignup(event)">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold mb-1">Create account</h2>
+            <p class="text-sm text-fg-subtle">Start monitoring financial risk today</p>
+          </div>
+
+          <!-- Social Login -->
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <button type="button" class="social-btn" onclick="demoLogin()">
+              <i class="fab fa-google text-sm"></i> Google
+            </button>
+            <button type="button" class="social-btn" onclick="demoLogin()">
+              <i class="fab fa-github text-sm"></i> GitHub
+            </button>
+          </div>
+
+          <div class="flex items-center gap-3 mb-6">
+            <div class="flex-1 h-px bg-border"></div>
+            <span class="text-xs text-fg-subtle">or sign up with email</span>
+            <div class="flex-1 h-px bg-border"></div>
+          </div>
+
+          <!-- Name row -->
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <div>
+              <label class="block text-sm font-medium mb-2">First Name</label>
+              <input type="text" id="signupFirstName" class="input-field" placeholder="John">
+              <p class="error-msg" id="firstNameError">Required</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-2">Last Name</label>
+              <input type="text" id="signupLastName" class="input-field" placeholder="Doe">
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Email</label>
+            <div class="relative">
+              <input type="email" id="signupEmail" class="input-field" placeholder="analyst@crisisx.ai">
+              <i class="fas fa-envelope absolute right-4 top-1/2 -translate-y-1/2 text-fg-subtle text-sm"></i>
+            </div>
+            <p class="error-msg" id="signupEmailError">Please enter a valid email</p>
+          </div>
+
+          <!-- Role -->
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Role</label>
+            <select id="signupRole" class="input-field" style="appearance: none; cursor: pointer;">
+              <option value="">Select your role</option>
+              <option value="analyst">Risk Analyst</option>
+              <option value="portfolio">Portfolio Manager</option>
+              <option value="trader">Trader</option>
+              <option value="researcher">Research Analyst</option>
+              <option value="banker">Investment Banker</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <!-- Password -->
+          <div class="mb-2">
+            <label class="block text-sm font-medium mb-2">Password</label>
+            <div class="relative">
+              <input type="password" id="signupPassword" class="input-field" placeholder="Create a strong password" oninput="checkPasswordStrength(this.value)">
+              <button type="button" onclick="togglePassword('signupPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg">
+                <i class="fas fa-eye text-sm"></i>
+              </button>
+            </div>
+            <p class="error-msg" id="signupPasswordError">Password must be at least 8 characters</p>
+          </div>
+
+          <!-- Strength bar -->
+          <div class="mb-4">
+            <div class="flex gap-1 mb-1">
+              <div class="strength-bar flex-1 bg-border" id="s1"></div>
+              <div class="strength-bar flex-1 bg-border" id="s2"></div>
+              <div class="strength-bar flex-1 bg-border" id="s3"></div>
+              <div class="strength-bar flex-1 bg-border" id="s4"></div>
+            </div>
+            <p class="text-xs text-fg-subtle" id="strengthLabel">Enter a password</p>
+          </div>
+
+          <!-- Confirm Password -->
+          <div class="mb-5">
+            <label class="block text-sm font-medium mb-2">Confirm Password</label>
+            <div class="relative">
+              <input type="password" id="confirmPassword" class="input-field" placeholder="Confirm your password">
+              <button type="button" onclick="togglePassword('confirmPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg">
+                <i class="fas fa-eye text-sm"></i>
+              </button>
+            </div>
+            <p class="error-msg" id="confirmPasswordError">Passwords don't match</p>
+          </div>
+
+          <!-- Terms -->
+          <div class="flex items-start gap-3 mb-6">
+            <input type="checkbox" id="agreeTerms" class="mt-1 w-4 h-4" style="accent-color: #ef4444;">
+            <label for="agreeTerms" class="text-sm text-fg-muted cursor-pointer leading-relaxed">
+              I agree to the <button type="button" class="text-accent hover:underline">Terms of Service</button> and <button type="button" class="text-accent hover:underline">Privacy Policy</button>
+            </label>
+          </div>
+          <p class="error-msg mb-4" id="termsError">You must agree to the terms</p>
+
+          <!-- Submit -->
+          <button type="submit" class="submit-btn" id="signupBtn">
+            <span id="signupBtnText">Create Account</span>
+          </button>
+        </form>
+
+        <!-- Divider -->
+        <div class="mt-6 pt-6 border-t border-border text-center">
+          <p class="text-xs text-fg-subtle" id="switchText">
+            Don't have an account?
+            <button onclick="switchTab('signup')" class="text-accent hover:underline font-medium ml-1">Sign up free</button>
+          </p>
+        </div>
+      </div>
+
+      <!-- Trust badges -->
+      <div class="flex items-center justify-center gap-6 mt-6 text-xs text-fg-subtle">
+        <div class="flex items-center gap-1.5">
+          <i class="fas fa-lock text-success text-xs"></i> SSL Secured
+        </div>
+        <div class="flex items-center gap-1.5">
+          <i class="fas fa-shield-alt text-info text-xs"></i> SOC 2
+        </div>
+        <div class="flex items-center gap-1.5">
+          <i class="fas fa-user-shield text-warning text-xs"></i> GDPR
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Forgot Password Modal -->
+  <div id="forgotModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-6" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(4px);">
+    <div class="glass-card rounded-2xl p-8 w-full max-w-md">
+      <div class="flex items-center justify-between mb-6">
+        <h3 class="text-lg font-semibold">Reset Password</h3>
+        <button onclick="hideForgotPassword()" class="text-fg-subtle hover:text-fg"><i class="fas fa-times"></i></button>
+      </div>
+      <p class="text-sm text-fg-muted mb-5">Enter your email and we'll send you a reset link.</p>
+      <input type="email" id="resetEmail" class="input-field mb-4" placeholder="analyst@crisisx.ai">
+      <button onclick="sendResetLink()" class="submit-btn">Send Reset Link</button>
+    </div>
+  </div>
+
+  <!-- Success Toast -->
+  <div id="successToast" class="fixed top-6 right-6 z-[200] transform translate-x-[200%] transition-transform duration-500 ease-out">
+    <div class="glass-card border border-success/30 rounded-xl px-5 py-4 flex items-center gap-3 shadow-2xl">
+      <div class="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+        <i class="fas fa-check text-success text-sm"></i>
+      </div>
+      <div>
+        <p class="text-sm font-semibold" id="toastTitle">Success!</p>
+        <p class="text-xs text-fg-muted" id="toastMsg">Redirecting to dashboard...</p>
+      </div>
+    </div>
+  </div>
+
+<script src="api.js"></script>
+<script>
+  // Redirect if already logged in
+  if (Auth.isLoggedIn()) { window.location.href = 'Dashboard.html'; }
+
+  // ===== TAB SWITCHER =====
+  const switchText = document.getElementById('switchText');
+  function switchTab(tab) {
+    const lf = document.getElementById('loginForm'), sf = document.getElementById('signupForm');
+    const lt = document.getElementById('loginTab'), st = document.getElementById('signupTab');
+    if (tab === 'login') {
+      lf.classList.remove('hidden'); sf.classList.add('hidden');
+      lt.classList.add('active'); st.classList.remove('active');
+      switchText.innerHTML = `Don't have an account? <button onclick="switchTab('signup')" class="text-accent hover:underline font-medium ml-1">Sign up free</button>`;
+    } else {
+      lf.classList.add('hidden'); sf.classList.remove('hidden');
+      lt.classList.remove('active'); st.classList.add('active');
+      switchText.innerHTML = `Already have an account? <button onclick="switchTab('login')" class="text-accent hover:underline font-medium ml-1">Sign in</button>`;
+    }
+    clearErrors();
+  }
+
+  // ===== ERROR HELPERS =====
+  function showError(inputId, msgId) {
+    const el = document.getElementById(inputId);
+    const msg = document.getElementById(msgId);
+    if (el) { el.classList.add('error'); el.classList.remove('success'); }
+    if (msg) msg.classList.add('show');
+  }
+  function setSuccess(inputId) {
+    const el = document.getElementById(inputId);
+    if (el) { el.classList.remove('error'); el.classList.add('success'); }
+  }
+  function clearErrors() {
+    document.querySelectorAll('.input-field').forEach(el => { el.classList.remove('error','success'); });
+    document.querySelectorAll('.error-msg').forEach(el => el.classList.remove('show'));
+  }
+
+  // ===== LOGIN HANDLER (real API) =====
+  async function handleLogin(e) {
+    e.preventDefault(); clearErrors();
+    const email    = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    let valid = true;
+    if (!email || !/\S+@\S+\.\S+/.test(email)) { showError('loginEmail','loginEmailError'); valid = false; } else setSuccess('loginEmail');
+    if (!password) { showError('loginPassword','loginPasswordError'); valid = false; } else setSuccess('loginPassword');
+    if (!valid) {
+      document.getElementById('loginForm').classList.add('shake');
+      setTimeout(() => document.getElementById('loginForm').classList.remove('shake'), 400);
+      return;
+    }
+    setLoading('loginBtn','loginBtnText',true,'Signing in...');
+    try {
+      const data = await CrisisAPI.login(email, password);
+      Auth.setToken(data.access_token);
+      Auth.setUser(data.user);
+      showToast('Welcome back!', `Hello, ${data.user.name}!`);
+      setTimeout(() => { window.location.href = 'Dashboard.html'; }, 1200);
+    } catch (err) {
+      setLoading('loginBtn','loginBtnText',false,'Sign In');
+      showErrorToast(err.message || 'Login failed. Please check your credentials.');
+      document.getElementById('loginForm').classList.add('shake');
+      setTimeout(() => document.getElementById('loginForm').classList.remove('shake'), 400);
+    }
+  }
+
+  // ===== SIGNUP HANDLER (real API) =====
+  async function handleSignup(e) {
+    e.preventDefault(); clearErrors();
+    const firstName = document.getElementById('signupFirstName').value.trim();
+    const lastName  = document.getElementById('signupLastName').value.trim();
+    const email     = document.getElementById('signupEmail').value.trim();
+    const password  = document.getElementById('signupPassword').value;
+    const confirm   = document.getElementById('confirmPassword').value;
+    const terms     = document.getElementById('agreeTerms').checked;
+    let valid = true;
+    if (!firstName) { showError('signupFirstName','firstNameError'); valid = false; } else setSuccess('signupFirstName');
+    if (!email || !/\S+@\S+\.\S+/.test(email)) { showError('signupEmail','signupEmailError'); valid = false; } else setSuccess('signupEmail');
+    if (!password || password.length < 6) { showError('signupPassword','signupPasswordError'); valid = false; } else setSuccess('signupPassword');
+    if (password !== confirm) { showError('confirmPassword','confirmPasswordError'); valid = false; } else if (confirm) setSuccess('confirmPassword');
+    if (!terms) { document.getElementById('termsError').classList.add('show'); valid = false; }
+    if (!valid) {
+      document.getElementById('signupForm').classList.add('shake');
+      setTimeout(() => document.getElementById('signupForm').classList.remove('shake'), 400);
+      return;
+    }
+    setLoading('signupBtn','signupBtnText',true,'Creating account...');
+    try {
+      const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+      const data = await CrisisAPI.signup(fullName, email, password);
+      Auth.setToken(data.access_token);
+      Auth.setUser(data.user);
+      showToast('Account created!', `Welcome to CRISIS-X AI, ${firstName}!`);
+      setTimeout(() => { window.location.href = 'Dashboard.html'; }, 1200);
+    } catch (err) {
+      setLoading('signupBtn','signupBtnText',false,'Create Account');
+      showErrorToast(err.message || 'Registration failed. Please try again.');
+      document.getElementById('signupForm').classList.add('shake');
+      setTimeout(() => document.getElementById('signupForm').classList.remove('shake'), 400);
+    }
+  }
+
+  // ===== DEMO LOGIN =====
+  async function demoLogin() {
+    setLoading('loginBtn','loginBtnText',true,'Loading demo...');
+    try {
+      const data = await CrisisAPI.login('demo@crisisx.ai', 'demo1234');
+      Auth.setToken(data.access_token); Auth.setUser(data.user);
+      showToast('Demo Mode', 'Loading your dashboard...');
+      setTimeout(() => { window.location.href = 'Dashboard.html'; }, 1200);
+    } catch {
+      setLoading('loginBtn','loginBtnText',false,'Sign In');
+      showErrorToast('Demo account unavailable. Make sure the backend is running.');
+    }
+  }
+
+  // ===== UTILITIES =====
+  function setLoading(btnId, textId, loading, text) {
+    const btn = document.getElementById(btnId), textEl = document.getElementById(textId);
+    if (!btn || !textEl) return;
+    btn.disabled = loading;
+    textEl.innerHTML = loading
+      ? `<svg class="spinner inline-block w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full" viewBox="0 0 24 24"></svg>${text}`
+      : text;
+  }
+
+  function togglePassword(inputId, btn) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const showing = input.type === 'text';
+    input.type = showing ? 'password' : 'text';
+    btn.innerHTML = `<i class="fas fa-${showing ? 'eye' : 'eye-slash'} text-sm"></i>`;
+  }
+
+  function checkPasswordStrength(pw) {
+    const bars = ['s1','s2','s3','s4'];
+    const label = document.getElementById('strengthLabel');
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+    if (/\d/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    const colors = ['#ef4444','#f59e0b','#22c55e','#22c55e'];
+    const labels = ['Too weak','Could be stronger','Good password','Strong password!'];
+    bars.forEach((id,i) => {
+      const el = document.getElementById(id);
+      el.style.background = i < score ? colors[score-1] : '#1f1f23';
+    });
+    if (label) label.textContent = pw ? labels[score-1] || 'Enter a password' : 'Enter a password';
+  }
+
+  function showToast(title, msg) {
+    const toast = document.getElementById('successToast');
+    document.getElementById('toastTitle').textContent = title;
+    document.getElementById('toastMsg').textContent   = msg;
+    toast.style.transform = 'translateX(0)';
+    setTimeout(() => { toast.style.transform = 'translateX(200%)'; }, 4000);
+  }
+
+  function showErrorToast(msg) {
+    // Re-use success toast with error styling
+    const toast = document.getElementById('successToast');
+    toast.querySelector('.bg-success\\/20').style.background = 'rgba(239,68,68,0.2)';
+    toast.querySelector('.text-success').className = 'fas fa-times text-accent text-sm';
+    toast.querySelector('.border-success\\/30').style.borderColor = 'rgba(239,68,68,0.3)';
+    document.getElementById('toastTitle').textContent = 'Error';
+    document.getElementById('toastMsg').textContent   = msg;
+    toast.style.transform = 'translateX(0)';
+    setTimeout(() => { toast.style.transform = 'translateX(200%)'; }, 4000);
+  }
+
+  function showForgotPassword() { document.getElementById('forgotModal').classList.remove('hidden'); }
+  function hideForgotPassword() { document.getElementById('forgotModal').classList.add('hidden'); }
+  function sendResetLink() {
+    showToast('Reset link sent', 'Check your email inbox.');
+    hideForgotPassword();
+  }
+</script>
+</body>
+</html>
