@@ -9,6 +9,7 @@ import bcrypt as _bcrypt
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 import os, random, sqlite3, json
+import urllib.request
 from dotenv import load_dotenv
 
 # ── Load env ──────────────────────────────────────────────────
@@ -190,12 +191,32 @@ BANKS = [
     {"ticker":"DB","name":"Deutsche Bank","region":"Germany","riskScore":65,"trend":-3,"status":"High"},
     {"ticker":"JPM","name":"JPMorgan Chase","region":"USA","riskScore":28,"trend":-2,"status":"Low"},
 ]
-NEWS = [
-    {"source":"Reuters","timeAgo":"5 min","headline":"US regional banks face renewed deposit concerns amid rate uncertainty","sentiment":"Negative","impact":2.3,"category":"Banking"},
-    {"source":"Bloomberg","timeAgo":"18 min","headline":"Fed officials signal rates to stay higher for longer than expected","sentiment":"Cautious","impact":1.1,"category":"Market"},
-    {"source":"FT","timeAgo":"32 min","headline":"India GDP growth beats estimates, RBI maintains stable outlook","sentiment":"Positive","impact":-0.8,"category":"India"},
-    {"source":"WSJ","timeAgo":"1 hr","headline":"European Central Bank hints at rate cuts in upcoming meeting","sentiment":"Positive","impact":-0.5,"category":"Europe"},
-]
+def fetch_live_news():
+    try:
+        url = "https://gnews.io/api/v4/search?q=financial+crisis+banking+market&lang=en&max=6&apikey=demo"
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = json.loads(r.read())
+            articles = data.get("articles", [])
+            result = []
+            for a in articles:
+                title = a.get("title","")
+                source = a.get("source",{}).get("name","News")
+                pub = a.get("publishedAt","")
+                neg_words = ["crisis","crash","fall","drop","fear","risk","warn","debt","stress","collapse"]
+                pos_words = ["growth","rise","gain","recovery","stable","beat","strong"]
+                sentiment = "Negative" if any(w in title.lower() for w in neg_words) else "Positive" if any(w in title.lower() for w in pos_words) else "Cautious"
+                result.append({"source": source, "timeAgo": pub[:10], "headline": title, "sentiment": sentiment, "impact": round(random.uniform(-3,3),1), "category": "Markets"})
+            if result:
+                return result
+    except:
+        pass
+    return [
+        {"source":"Reuters","timeAgo":"5 min","headline":"US regional banks face renewed deposit concerns amid rate uncertainty","sentiment":"Negative","impact":2.3,"category":"Banking"},
+        {"source":"Bloomberg","timeAgo":"18 min","headline":"Fed officials signal rates to stay higher for longer than expected","sentiment":"Cautious","impact":1.1,"category":"Market"},
+        {"source":"FT","timeAgo":"32 min","headline":"India GDP growth beats estimates, RBI maintains stable outlook","sentiment":"Positive","impact":-0.8,"category":"India"},
+        {"source":"WSJ","timeAgo":"1 hr","headline":"European Central Bank hints at rate cuts in upcoming meeting","sentiment":"Positive","impact":-0.5,"category":"Europe"},
+    ]
 CRISES = {
     "2008":{"title":"2008 Financial Crisis","subtitle":"June 2008 — November 2008","event":"Lehman Brothers Collapse","date":"September 15, 2008","leadTime":28,"accuracy":87,"capitalSaved":22,"labels":["Jun 1","Jun 15","Jul 1","Jul 15","Aug 1","Aug 15","Aug 18","Sep 1","Sep 7","Sep 12","Sep 15","Sep 25","Oct 5","Oct 15","Oct 27","Nov 1","Nov 15","Nov 30"],"values":[22.4,21.1,23.8,24.5,26.2,25.9,27.3,28.1,32.5,38.2,45.6,52.1,65.4,76.8,89.5,78.2,65.1,58.4],"crashIndex":10,"alertIndex":6,"alertDate":"Aug 18, 2008","crashLabel":"LEHMAN COLLAPSE"},
     "2020":{"title":"COVID-19 Market Crash","subtitle":"February 2020 — April 2020","event":"Pandemic Panic Selloff","date":"March 12, 2020","leadTime":9,"accuracy":84,"capitalSaved":18,"labels":["Feb 3","Feb 10","Feb 17","Feb 24","Feb 28","Mar 3","Mar 6","Mar 9","Mar 12","Mar 16","Mar 20","Mar 27","Apr 3","Apr 10","Apr 17","Apr 24"],"values":[15.2,14.8,16.1,27.8,39.1,36.5,41.9,54.5,75.5,82.7,66.0,65.5,46.8,41.7,38.2,35.9],"crashIndex":8,"alertIndex":3,"alertDate":"Feb 24, 2020","crashLabel":"COVID CRASH"},
@@ -284,7 +305,7 @@ async def alert(alert_id:str, _=Depends(get_current_user)):
 async def banks(_=Depends(get_current_user)): return BANKS
 
 @app.get("/api/news")
-async def news(_=Depends(get_current_user)): return NEWS
+async def news(_=Depends(get_current_user)): return fetch_live_news()
 
 @app.get("/api/news/sentiment")
 async def sentiment(_=Depends(get_current_user)):

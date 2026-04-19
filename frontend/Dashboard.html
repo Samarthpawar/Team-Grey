@@ -1157,8 +1157,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Override window.logout
 window.logout = function() {
-  if (confirm('Are you sure you want to logout?')) logout();
-};
+  if (confirm('Are you sure you want to logout?')) {
+    Auth.clear();
+    window.location.href = 'login.html';
+  }
 </script>
 
 <!-- Mobile sidebar overlay -->
