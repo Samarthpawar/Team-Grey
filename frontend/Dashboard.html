@@ -816,8 +816,7 @@ tr:hover td { background:var(--surface-hov); }
         <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">News Today</div><div style="font-size:28px;font-weight:800;">1,842</div></div>
         <div class="card" style="padding:20px;"><div style="font-size:11px;color:var(--fg-subtle);margin-bottom:6px;">Overall Sentiment</div><div style="font-size:28px;font-weight:800;color:var(--accent);">Negative</div></div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
-        <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">Reuters • 5 min ago</span><span class="chip chip-red">Negative</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"US regional banks face renewed deposit concerns amid rising yields"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">Analysts warn of potential deposit flight similar to SVB crisis as 10-year yield approaches 4.8%.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--accent);">Banking Risk +2.3%</span><span style="font-size:11px;color:var(--fg-subtle);">Banking, USA</span></div></div>
+      <div id="newsGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;"><div class="news-card"><p style="font-size:13px;color:var(--fg-subtle);">Loading live news...</p></div>
         <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">Bloomberg • 18 min ago</span><span class="chip chip-yellow">Cautious</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"Fed signals rates to stay higher for longer, minutes reveal"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">FOMC minutes indicate policymakers are divided on timing of rate cuts, most cautious on early easing.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--warning);">Market Risk +1.1%</span><span style="font-size:11px;color:var(--fg-subtle);">Macro, Fed</span></div></div>
         <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">FT • 32 min ago</span><span class="chip chip-green">Positive</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"India GDP growth beats estimates at 7.2% for Q3 2024"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">Strong domestic consumption and manufacturing output propelled India to exceed analyst forecasts.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--success);">India Risk -0.8%</span><span style="font-size:11px;color:var(--fg-subtle);">Asia, India</span></div></div>
         <div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">WSJ • 1 hr ago</span><span class="chip chip-red">Negative</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">"China Evergrande creditors push for asset liquidation"</p><p style="font-size:12px;color:var(--fg-subtle);line-height:1.6;">International creditors seek court-ordered liquidation as restructuring talks collapse again.</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:var(--accent);">China Risk +3.1%</span><span style="font-size:11px;color:var(--fg-subtle);">Real Estate, China</span></div></div>
@@ -1155,12 +1154,54 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('resize', () => { if (window.innerWidth >= 1024) closeMobileSidebar(); });
 });
 
-// Override window.logout
+// Override // Override window.logout
 window.logout = function() {
   if (confirm('Are you sure you want to logout?')) {
     Auth.clear();
     window.location.href = 'login.html';
   }
+};
+
+// Load live news
+async function loadLiveNews() {
+  const grid = document.getElementById('newsGrid');
+  if (!grid) return;
+  try {
+    const rssUrl = 'https://feeds.finance.yahoo.com/rss/2.0/headline?s=^GSPC,^VIX&region=US&lang=en-US';
+    const proxyUrl = 'https://api.allorigins.win/get?url=' + encodeURIComponent(rssUrl);
+    const res = await fetch(proxyUrl);
+    const data = await res.json();
+    const parser = new DOMParser();
+    const xml = parser.parseFromString(data.contents, 'text/xml');
+    const items = Array.from(xml.querySelectorAll('item')).slice(0, 6);
+    if (items.length === 0) throw new Error('No items');
+    const negWords = ['crisis','crash','fall','drop','fear','risk','warn','debt','stress','collapse','loss','cut','decline','slump'];
+    const posWords = ['growth','rise','gain','recovery','stable','beat','strong','surge','rally'];
+    grid.innerHTML = items.map(item => {
+      const title = item.querySelector('title')?.textContent || '';
+      const source = item.querySelector('source')?.textContent || 'Yahoo Finance';
+      const pubDate = item.querySelector('pubDate')?.textContent || '';
+      const link = item.querySelector('link')?.textContent || '#';
+      const timeAgo = pubDate ? new Date(pubDate).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : 'Live';
+      const lower = title.toLowerCase();
+      const sentiment = negWords.some(w=>lower.includes(w)) ? 'Negative' : posWords.some(w=>lower.includes(w)) ? 'Positive' : 'Cautious';
+      const chipClass = sentiment==='Negative'?'chip-red':sentiment==='Positive'?'chip-green':'chip-yellow';
+      const impactColor = sentiment==='Negative'?'var(--accent)':sentiment==='Positive'?'var(--success)':'var(--warning)';
+      return '<div class="news-card" onclick="window.open(\'' + link + '\',\'_blank\')" style="cursor:pointer;"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">' + source + ' • ' + timeAgo + '</span><span class="chip ' + chipClass + '">' + sentiment + '</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">' + title + '</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:' + impactColor + ';">Live News</span><span style="font-size:11px;color:var(--fg-subtle);">Finance</span></div></div>';
+    }).join('');
+  } catch(e) {
+    try {
+      const apiNews = await CrisisAPI.news();
+      grid.innerHTML = apiNews.map(n => {
+        const chipClass = n.sentiment==='Negative'?'chip-red':n.sentiment==='Positive'?'chip-green':'chip-yellow';
+        const impactColor = n.sentiment==='Negative'?'var(--accent)':n.sentiment==='Positive'?'var(--success)':'var(--warning)';
+        return '<div class="news-card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;"><span style="font-size:11px;color:var(--fg-subtle);">' + n.source + ' • ' + n.timeAgo + '</span><span class="chip ' + chipClass + '">' + n.sentiment + '</span></div><p style="font-size:14px;font-weight:600;margin-bottom:8px;line-height:1.5;">' + n.headline + '</p><div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;"><span style="font-size:12px;color:' + impactColor + ';">Risk ' + (n.impact>0?'+':'') + n.impact + '%</span><span style="font-size:11px;color:var(--fg-subtle);">' + n.category + '</span></div></div>';
+      }).join('');
+    } catch(e2) { console.warn('News load failed', e2); }
+  }
+}
+setTimeout(loadLiveNews, 800);
+setInterval(loadLiveNews, 120000);
 </script>
 
 <!-- Mobile sidebar overlay -->
