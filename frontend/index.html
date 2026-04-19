@@ -1132,5 +1132,27 @@ function goToDashboard() {
     window.location.href = localStorage.getItem('crisisx_token') ? 'Dashboard.html' : 'login.html';
 }
 </script>
+<!-- UPDATED LAST SCRIPT BLOCK FOR YOUR index.html -->
+
+<script>
+function goToDashboard() {
+    const token = localStorage.getItem("crisisx_token");
+
+    if (token && token.trim() !== "") {
+        window.location.href = "/dashboard";
+    } else {
+        window.location.href = "/login";
+    }
+}
+
+// Fix old login.html links automatically
+document.addEventListener("DOMContentLoaded", function () {
+    const loginLinks = document.querySelectorAll('a[href="login.html"]');
+
+    loginLinks.forEach(link => {
+        link.setAttribute("href", "/login");
+    });
+});
+</script>
 </body>
 </html>
